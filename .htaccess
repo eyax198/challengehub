@@ -1,0 +1,25 @@
+Options -Indexes
+DirectoryIndex index.php
+
+# Prevent direct access to sensitive directories
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /challengehub_db/
+
+    # Block direct access to app/config/database directories
+    RewriteRule ^(app|config|database)/ - [F,L]
+</IfModule>
+
+# Charset
+AddDefaultCharset UTF-8
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable PHP error display in production (comment for dev)
+# php_flag display_errors Off

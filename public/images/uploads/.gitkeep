@@ -1,0 +1,8 @@
+This directory holds uploaded files.
+
+Subdirectories:
+- avatars/   → user profile pictures
+- challenges/ → challenge cover images
+- submissions/ → submission images
+
+Do NOT delete this file — it keeps the directory tracked by Git.
