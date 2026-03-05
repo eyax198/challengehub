@@ -2,125 +2,145 @@
 
 require_once __DIR__ . '/Model.php';
 
+/**
+ * Modèle Challenge - Gère les données des défis
+ */
 class Challenge extends Model {
 
-    // ── Create ────────────────────────────────────────────────
-    public function create(array $data): int|false {
-        $this->query(
-            "INSERT INTO challenges (user_id, title, description, category, deadline, image, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, NOW())",
-            [
-                $data['user_id'],
-                $data['title'],
-                $data['description'],
-                $data['category'],
-                $data['deadline'],
-                $data['image'] ?? null,
-            ]
-        );
-        return (int) $this->lastInsertId();
+    /**
+     * Crée un défi
+     */
+    public function create($data) {
+        $sql = "INSERT INTO challenges (user_id, title, description, category, deadline, image, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW())";
+        
+        $params = [
+            $data['user_id'],
+            $data['title'],
+            $data['description'],
+            $data['category'],
+            $data['deadline'],
+            $data['image'] ?? null,
+        ];
+
+        $this->query($sql, $params);
+        return $this->lastInsertId();
     }
 
-    // ── Read ─────────────────────────────────────────────────
-    public function findById(string $table = 'challenges', int $id = 0): array|false {
-        return $this->query(
-            "SELECT c.*, u.username, u.avatar
-             FROM challenges c
-             JOIN users u ON c.user_id = u.id
-             WHERE c.id = ?",
-            [$id]
-        )->fetch();
+    /**
+     * Récupère un défi par son ID (avec les infos de l'auteur)
+     */
+    public function findById($id) {
+        $sql = "SELECT c.*, u.username, u.avatar
+                FROM challenges c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.id = ?";
+        
+        return $this->query($sql, [$id])->fetch();
     }
 
-    public function getAll(array $filters = [], int $page = 1): array {
-        $where  = ['1=1'];
+    /**
+     * Liste tous les défis avec filtres et pagination
+     */
+    public function getAll($filters = [], $page = 1) {
+        // Construction dynamique de la clause WHERE
+        $where = "1=1";
         $params = [];
 
         if (!empty($filters['keyword'])) {
-            $where[]  = "(c.title LIKE ? OR c.description LIKE ?)";
-            $kw       = '%' . $filters['keyword'] . '%';
-            $params[] = $kw;
-            $params[] = $kw;
+            $where .= " AND (c.title LIKE ? OR c.description LIKE ?)";
+            $params[] = "%" . $filters['keyword'] . "%";
+            $params[] = "%" . $filters['keyword'] . "%";
         }
 
         if (!empty($filters['category'])) {
-            $where[]  = "c.category = ?";
+            $where .= " AND c.category = ?";
             $params[] = $filters['category'];
         }
 
-        $orderBy = match($filters['sort'] ?? 'newest') {
-            'popular' => 'submissions_count DESC',
-            'oldest'  => 'c.created_at ASC',
-            default   => 'c.created_at DESC',
-        };
+        // Tri (par défaut : plus récent)
+        $orderBy = "c.created_at DESC";
+        if (isset($filters['sort'])) {
+            if ($filters['sort'] === 'oldest') $orderBy = "c.created_at ASC";
+            if ($filters['sort'] === 'popular') $orderBy = "submissions_count DESC";
+        }
 
+        // Pagination
         $perPage = PER_PAGE;
-        $offset  = ($page - 1) * $perPage;
+        $offset = ($page - 1) * $perPage;
 
+        // Requête complète avec jointure pour avoir l'auteur et compte des participations
         $sql = "SELECT c.*, u.username, u.avatar,
-                       COUNT(DISTINCT s.id) AS submissions_count
+                       (SELECT COUNT(*) FROM submissions WHERE challenge_id = c.id) AS submissions_count
                 FROM challenges c
                 JOIN users u ON c.user_id = u.id
-                LEFT JOIN submissions s ON s.challenge_id = c.id
-                WHERE " . implode(' AND ', $where) . "
-                GROUP BY c.id
-                ORDER BY {$orderBy}
-                LIMIT {$perPage} OFFSET {$offset}";
+                WHERE $where
+                ORDER BY $orderBy
+                LIMIT $perPage OFFSET $offset";
 
         return $this->query($sql, $params)->fetchAll();
     }
 
-    public function countAll(array $filters = []): int {
-        $where  = ['1=1'];
+    /**
+     * Compte le nombre total de défis (pour la pagination)
+     */
+    public function countAll($filters = []) {
+        $where = "1=1";
         $params = [];
 
         if (!empty($filters['keyword'])) {
-            $where[]  = "(title LIKE ? OR description LIKE ?)";
-            $kw       = '%' . $filters['keyword'] . '%';
-            $params[] = $kw;
-            $params[] = $kw;
+            $where .= " AND (title LIKE ? OR description LIKE ?)";
+            $params[] = "%" . $filters['keyword'] . "%";
+            $params[] = "%" . $filters['keyword'] . "%";
         }
 
         if (!empty($filters['category'])) {
-            $where[]  = "category = ?";
+            $where .= " AND category = ?";
             $params[] = $filters['category'];
         }
 
-        return (int) $this->query(
-            "SELECT COUNT(*) FROM challenges WHERE " . implode(' AND ', $where),
-            $params
-        )->fetchColumn();
+        $sql = "SELECT COUNT(*) FROM challenges WHERE $where";
+        return (int) $this->query($sql, $params)->fetchColumn();
     }
 
-    public function getByUser(int $userId): array {
-        return $this->query(
-            "SELECT c.*, COUNT(DISTINCT s.id) AS submissions_count
-             FROM challenges c
-             LEFT JOIN submissions s ON s.challenge_id = c.id
-             WHERE c.user_id = ?
-             GROUP BY c.id
-             ORDER BY c.created_at DESC",
-            [$userId]
-        )->fetchAll();
+    /**
+     * Récupère les défis créés par un utilisateur spécifique
+     */
+    public function getByUser($userId) {
+        $sql = "SELECT c.*, 
+                (SELECT COUNT(*) FROM submissions WHERE challenge_id = c.id) AS submissions_count
+                FROM challenges c
+                WHERE c.user_id = ?
+                ORDER BY c.created_at DESC";
+        
+        return $this->query($sql, [$userId])->fetchAll();
     }
 
-    public function getCategories(): array {
-        return $this->query("SELECT DISTINCT category FROM challenges ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+    /**
+     * Récupère la liste des catégories existantes
+     */
+    public function getCategories() {
+        $sql = "SELECT DISTINCT category FROM challenges ORDER BY category";
+        return $this->query($sql)->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    public function getRecent(int $limit = 6): array {
-        return $this->query(
-            "SELECT c.*, u.username, u.avatar
-             FROM challenges c
-             JOIN users u ON c.user_id = u.id
-             ORDER BY c.created_at DESC
-             LIMIT ?",
-            [$limit]
-        )->fetchAll();
+    /**
+     * Récupère les défis récents (pour la page d'accueil)
+     */
+    public function getRecent($limit = 6) {
+        $sql = "SELECT c.*, u.username, u.avatar
+                FROM challenges c
+                JOIN users u ON c.user_id = u.id
+                ORDER BY c.created_at DESC
+                LIMIT $limit";
+        
+        return $this->query($sql)->fetchAll();
     }
 
-    // ── Update ────────────────────────────────────────────────
-    public function update(int $id, array $data): bool {
+    /**
+     * Met à jour un défi
+     */
+    public function update($id, $data) {
         $fields = [];
         $params = [];
 
@@ -133,14 +153,14 @@ class Challenge extends Model {
         if (empty($fields)) return false;
 
         $params[] = $id;
-        return $this->query(
-            "UPDATE challenges SET " . implode(', ', $fields) . " WHERE id = ?",
-            $params
-        )->rowCount() > 0;
+        $sql = "UPDATE challenges SET " . implode(', ', $fields) . " WHERE id = ?";
+        return $this->query($sql, $params)->rowCount() > 0;
     }
 
-    // ── Delete ────────────────────────────────────────────────
-    public function delete(int $id): bool {
+    /**
+     * Supprime un défi
+     */
+    public function delete($id) {
         return $this->deleteById('challenges', $id);
     }
 }

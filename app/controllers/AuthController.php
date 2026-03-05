@@ -1,131 +1,142 @@
 <?php
 
-require_once __DIR__ . '/Controller.php';
 require_once ROOT_PATH . '/app/models/User.php';
 
+/**
+ * Contrôleur Auth - Gère l'authentification (Connexion / Inscription)
+ */
 class AuthController extends Controller {
 
-    private User $userModel;
+    private $userModel;
 
     public function __construct() {
+        // Chargement du modèle User pour interagir avec la table users
         $this->userModel = new User();
     }
 
-    // ── GET /login ────────────────────────────────────────────
-    public function showLogin(): void {
+    /**
+     * Affiche la page de connexion
+     */
+    public function showLogin() {
+        // Si l'utilisateur est déjà connecté, on le renvoie à l'accueil
         if ($this->isLoggedIn()) {
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
+            $this->redirect('index.php');
         }
+
+        // On génère un jeton CSRF pour sécuriser le futur formulaire de POST
         $csrf = $this->generateCsrfToken();
-        $this->render('auth.login', ['csrf' => $csrf, 'pageTitle' => 'Connexion']);
+
+        $this->render('auth/login', [
+            'pageTitle' => 'Connexion',
+            'csrf'      => $csrf
+        ]);
     }
 
-    // ── POST /login ───────────────────────────────────────────
-    public function login(): void {
+    /**
+     * Traite la soumission du formulaire de connexion (POST)
+     */
+    public function login() {
+        // Vérification de sécurité (CSRF)
         $this->verifyCsrfToken();
 
-        $email    = $this->post('email');
-        $password = $_POST['password'] ?? ''; // do NOT sanitize raw password
+        // Récupération et nettoyage des données du formulaire
+        $email    = $this->sanitize($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-        if (empty($email) || empty($password)) {
-            $this->setFlash('error', 'Veuillez remplir tous les champs.');
-            $this->redirect(BASE_URL . '/index.php?page=login');
-            return;
-        }
-
+        // On demande au modèle d'authentifier l'utilisateur
         $user = $this->userModel->authenticate($email, $password);
 
-        if (!$user) {
+        if ($user) {
+            // Succès : On remplit la session avec les infos de l'utilisateur
+            $_SESSION['user_id']  = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            
+            // On peut stocker tout le tableau utilisateur pour y accéder facilement
+            $_SESSION['user']     = $user;
+
+            $this->setFlash('success', 'Bienvenue ' . $user['username'] . ' !');
+            $this->redirect('index.php');
+        } else {
+            // Échec : Identifiants incorrects
             $this->setFlash('error', 'Email ou mot de passe incorrect.');
-            $this->redirect(BASE_URL . '/index.php?page=login');
-            return;
+            $this->redirect('index.php?page=login');
         }
-
-        // Regenerate session ID to prevent session fixation
-        session_regenerate_id(true);
-
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['user']    = [
-            'id'       => $user['id'],
-            'username' => $user['username'],
-            'email'    => $user['email'],
-            'avatar'   => $user['avatar'],
-        ];
-
-        $this->setFlash('success', 'Bienvenue, ' . htmlspecialchars($user['username']) . ' !');
-        $this->redirect(BASE_URL . '/index.php?page=challenges');
     }
 
-    // ── GET /register ─────────────────────────────────────────
-    public function showRegister(): void {
+    /**
+     * Affiche la page d'inscription
+     */
+    public function showRegister() {
         if ($this->isLoggedIn()) {
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
+            $this->redirect('index.php');
         }
+
         $csrf = $this->generateCsrfToken();
-        $this->render('auth.register', ['csrf' => $csrf, 'pageTitle' => 'Inscription']);
+
+        $this->render('auth/register', [
+            'pageTitle' => 'Créer un compte',
+            'csrf'      => $csrf
+        ]);
     }
 
-    // ── POST /register ────────────────────────────────────────
-    public function register(): void {
+    /**
+     * Traite l'inscription (POST)
+     */
+    public function register() {
         $this->verifyCsrfToken();
 
-        $username  = $this->post('username');
-        $email     = $this->post('email');
-        $password  = $_POST['password']  ?? '';
-        $password2 = $_POST['password2'] ?? '';
+        // Récupération des données du formulaire
+        $username = $this->sanitize($_POST['username'] ?? '');
+        $email    = $this->sanitize($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirm  = $_POST['password_confirm'] ?? '';
 
-        // Validations
-        $errors = [];
-        if (strlen($username) < 3 || strlen($username) > 50) {
-            $errors[] = 'Le nom d\'utilisateur doit comporter entre 3 et 50 caractères.';
+        // Validations basiques (On pourrait en faire plus, mais restons simples)
+        if ($password !== $confirm) {
+            $this->setFlash('error', 'Les mots de passe ne correspondent pas.');
+            $this->redirect('index.php?page=register');
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Adresse email invalide.';
-        }
-        if (strlen($password) < 8) {
-            $errors[] = 'Le mot de passe doit comporter au moins 8 caractères.';
-        }
-        if ($password !== $password2) {
-            $errors[] = 'Les mots de passe ne correspondent pas.';
-        }
+
+        // On vérifie si l'email ou le pseudo existe déjà
         if ($this->userModel->findByEmail($email)) {
-            $errors[] = 'Cet email est déjà utilisé.';
-        }
-        if ($this->userModel->findByUsername($username)) {
-            $errors[] = 'Ce nom d\'utilisateur est déjà pris.';
+            $this->setFlash('error', 'Cet email est déjà utilisé.');
+            $this->redirect('index.php?page=register');
         }
 
-        if (!empty($errors)) {
-            $_SESSION['form_errors'] = $errors;
-            $_SESSION['form_data']   = compact('username', 'email');
-            $this->redirect(BASE_URL . '/index.php?page=register');
-            return;
-        }
+        // Gestion de l'avatar (image de profil) via l'outil hérité du parent
+        $avatar = $this->handleUpload('avatar');
 
-        $avatar = $this->handleUpload('avatar', 'avatars');
-        $bio    = $this->post('bio');
-
+        // Création de l'utilisateur en base de données
         $userId = $this->userModel->create([
             'username' => $username,
             'email'    => $email,
             'password' => $password,
             'avatar'   => $avatar,
-            'bio'      => $bio,
+            'bio'      => ''
         ]);
 
         if ($userId) {
-            $this->setFlash('success', 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
-            $this->redirect(BASE_URL . '/index.php?page=login');
+            $this->setFlash('success', 'Votre compte a été créé avec succès ! Connectez-vous.');
+            $this->redirect('index.php?page=login');
         } else {
-            $this->setFlash('error', 'Erreur lors de la création du compte.');
-            $this->redirect(BASE_URL . '/index.php?page=register');
+            $this->setFlash('error', 'Une erreur est survenue lors de l\'inscription.');
+            $this->redirect('index.php?page=register');
         }
     }
 
-    // ── Logout ────────────────────────────────────────────────
-    public function logout(): void {
+    /**
+     * Déconnexion de l'utilisateur
+     */
+    public function logout() {
+        // On vide toutes les variables de session
         session_unset();
+        
+        // On détruit la session actuelle
         session_destroy();
-        $this->redirect(BASE_URL . '/index.php?page=home');
+
+        // On repart sur une nouvelle session propre pour le message de confirmation
+        session_start();
+        $this->setFlash('success', 'Vous avez été déconnecté.');
+        $this->redirect('index.php');
     }
 }

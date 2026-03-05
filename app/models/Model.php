@@ -1,32 +1,54 @@
 <?php
 
-require_once ROOT_PATH . '/config/database.php';
-
+/**
+ * Classe Model (Classe parente)
+ * Contient les outils de base pour communiquer avec la base de données.
+ */
 abstract class Model {
-    protected PDO $db;
+    // Stocke la connexion PDO
+    protected $db;
 
     public function __construct() {
+        // On récupère la connexion via le Singleton
         $this->db = Database::getInstance();
     }
 
     /**
-     * Execute a prepared statement and return the statement object.
+     * Exécute une requête SQL préparée
+     * @param string $sql La requête (ex: SELECT * FROM table WHERE id = ?)
+     * @param array $params Les valeurs à injecter dans les points d'interrogation
+     * @return PDOStatement L'objet résultat de PDO
      */
-    protected function query(string $sql, array $params = []): PDOStatement {
+    protected function query($sql, $params = []) {
+        // Préparation de la requête (Protection contre les injections SQL)
         $stmt = $this->db->prepare($sql);
+        
+        // Exécution avec les paramètres
         $stmt->execute($params);
+        
         return $stmt;
     }
 
-    protected function findById(string $table, int $id): array|false {
-        return $this->query("SELECT * FROM `{$table}` WHERE id = ?", [$id])->fetch();
+    /**
+     * Récupère un enregistrement par son ID (Outil générique)
+     */
+    protected function findInTable($table, $id) {
+        $stmt = $this->query("SELECT * FROM {$table} WHERE id = ?", [$id]);
+        return $stmt->fetch();
     }
 
-    protected function deleteById(string $table, int $id): bool {
-        return $this->query("DELETE FROM `{$table}` WHERE id = ?", [$id])->rowCount() > 0;
+    /**
+     * Supprime un enregistrement par son ID
+     */
+    protected function deleteById($table, $id) {
+        $stmt = $this->query("DELETE FROM {$table} WHERE id = ?", [$id]);
+        return $stmt->rowCount() > 0;
     }
 
-    protected function lastInsertId(): string {
+    /**
+     * Récupère le dernier ID généré (auto-incrément)
+     */
+    protected function lastInsertId() {
         return $this->db->lastInsertId();
     }
 }

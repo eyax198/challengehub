@@ -2,46 +2,57 @@
 
 require_once __DIR__ . '/Model.php';
 
+/**
+ * Modèle Comment - Gère les commentaires sur les projets
+ */
 class Comment extends Model {
 
-    // ── Create ────────────────────────────────────────────────
-    public function create(array $data): int|false {
-        $this->query(
-            "INSERT INTO comments (submission_id, user_id, content, created_at)
-             VALUES (?, ?, ?, NOW())",
-            [
-                $data['submission_id'],
-                $data['user_id'],
-                $data['content'],
-            ]
-        );
-        return (int) $this->lastInsertId();
+    /**
+     * Crée un nouveau commentaire
+     */
+    public function create($data) {
+        $sql = "INSERT INTO comments (submission_id, user_id, content, created_at)
+                VALUES (?, ?, ?, NOW())";
+        
+        $params = [
+            $data['submission_id'],
+            $data['user_id'],
+            $data['content'],
+        ];
+
+        $this->query($sql, $params);
+        return $this->lastInsertId();
     }
 
-    // ── Read ─────────────────────────────────────────────────
-    public function findById(string $table = 'comments', int $id = 0): array|false {
-        return $this->query(
-            "SELECT cm.*, u.username, u.avatar
-             FROM comments cm
-             JOIN users u ON cm.user_id = u.id
-             WHERE cm.id = ?",
-            [$id]
-        )->fetch();
+    /**
+     * Récupère un commentaire par son ID (avec auteur)
+     */
+    public function findById($id) {
+        $sql = "SELECT cm.*, u.username, u.avatar
+                FROM comments cm
+                JOIN users u ON cm.user_id = u.id
+                WHERE cm.id = ?";
+        
+        return $this->query($sql, [$id])->fetch();
     }
 
-    public function getBySubmission(int $submissionId): array {
-        return $this->query(
-            "SELECT cm.*, u.username, u.avatar
-             FROM comments cm
-             JOIN users u ON cm.user_id = u.id
-             WHERE cm.submission_id = ?
-             ORDER BY cm.created_at ASC",
-            [$submissionId]
-        )->fetchAll();
+    /**
+     * Récupère tous les commentaires d'une participation spécifique
+     */
+    public function getBySubmission($submissionId) {
+        $sql = "SELECT cm.*, u.username, u.avatar
+                FROM comments cm
+                JOIN users u ON cm.user_id = u.id
+                WHERE cm.submission_id = ?
+                ORDER BY cm.created_at ASC";
+        
+        return $this->query($sql, [$submissionId])->fetchAll();
     }
 
-    // ── Delete ────────────────────────────────────────────────
-    public function delete(int $id): bool {
+    /**
+     * Supprime un commentaire
+     */
+    public function delete($id) {
         return $this->deleteById('comments', $id);
     }
 }

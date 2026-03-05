@@ -1,17 +1,19 @@
 <?php
 
-require_once __DIR__ . '/Controller.php';
 require_once ROOT_PATH . '/app/models/Submission.php';
 require_once ROOT_PATH . '/app/models/Challenge.php';
 require_once ROOT_PATH . '/app/models/Comment.php';
 require_once ROOT_PATH . '/app/models/Vote.php';
 
+/**
+ * Contrôleur Submission - Gère les participations, votes et commentaires
+ */
 class SubmissionController extends Controller {
 
-    private Submission $submissionModel;
-    private Challenge  $challengeModel;
-    private Comment    $commentModel;
-    private Vote       $voteModel;
+    private $submissionModel;
+    private $challengeModel;
+    private $commentModel;
+    private $voteModel;
 
     public function __construct() {
         $this->submissionModel = new Submission();
@@ -20,199 +22,153 @@ class SubmissionController extends Controller {
         $this->voteModel       = new Vote();
     }
 
-    // ── GET /submission/show?id=X ─────────────────────────────
-    public function show(): void {
-        $id         = (int) ($_GET['id'] ?? 0);
+    /**
+     * Affiche une participation et ses commentaires
+     */
+    public function show() {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         $submission = $this->submissionModel->findById('submissions', $id);
 
         if (!$submission) {
             $this->setFlash('error', 'Participation introuvable.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+            $this->redirect('index.php?page=challenges');
         }
 
         $comments = $this->commentModel->getBySubmission($id);
-        $hasVoted = $this->isLoggedIn()
-            ? $this->voteModel->hasVoted($this->currentUserId(), $id)
-            : false;
+        
+        $hasVoted = false;
+        if ($this->isLoggedIn()) {
+            $hasVoted = $this->voteModel->hasVoted($this->currentUserId(), $id);
+        }
 
-        $this->render('submission.show', [
-            'pageTitle'  => 'Participation de ' . htmlspecialchars($submission['username']),
+        $this->render('submission/show', [
+            'pageTitle'  => 'Participation de ' . $submission['username'],
             'submission' => $submission,
             'comments'   => $comments,
             'hasVoted'   => $hasVoted,
-            'csrf'       => $this->generateCsrfToken(),
+            'csrf'       => $this->generateCsrfToken()
         ]);
     }
 
-    // ── POST /submission/create ───────────────────────────────
-    public function create(): void {
+    /**
+     * Soumettre une participation à un défi (POST)
+     */
+    public function create() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $challengeId = (int) ($_POST['challenge_id'] ?? 0);
-        $challenge   = $this->challengeModel->findById('challenges', $challengeId);
-
-        if (!$challenge) {
-            $this->setFlash('error', 'Défi introuvable.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
-        }
-
+        $challengeId = (int)$_POST['challenge_id'];
+        
+        // Vérifier si l'utilisateur a déjà participé
         if ($this->submissionModel->existsByUserAndChallenge($this->currentUserId(), $challengeId)) {
-            $this->setFlash('error', 'Vous avez déjà soumis une participation à ce défi.');
-            $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $challengeId);
-            return;
+            $this->setFlash('error', 'Vous avez déjà participé à ce défi.');
+            $this->redirect('index.php?page=challenge-show&id=' . $challengeId);
         }
 
-        $description = $this->post('description');
-        $link        = $this->post('link');
-
-        if (strlen($description) < 10) {
-            $this->setFlash('error', 'La description est trop courte.');
-            $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $challengeId);
-            return;
-        }
-
-        $image = $this->handleUpload('image', 'submissions');
-
-        $id = $this->submissionModel->create([
+        $image = $this->handleUpload('image');
+        
+        $data = [
             'challenge_id' => $challengeId,
             'user_id'      => $this->currentUserId(),
-            'description'  => $description,
-            'image'        => $image,
-            'link'         => !empty($link) ? $link : null,
-        ]);
-
-        if ($id) {
-            $this->setFlash('success', 'Participation soumise avec succès !');
-            $this->redirect(BASE_URL . '/index.php?page=submission-show&id=' . $id);
-        } else {
-            $this->setFlash('error', 'Erreur lors de la soumission.');
-            $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $challengeId);
-        }
-    }
-
-    // ── GET /submission/edit?id=X ─────────────────────────────
-    public function showEdit(): void {
-        $this->requireLogin();
-        $id         = (int) ($_GET['id'] ?? 0);
-        $submission = $this->submissionModel->findById('submissions', $id);
-
-        if (!$submission || (int)$submission['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
-        }
-
-        $this->render('submission.edit', [
-            'pageTitle'  => 'Modifier la participation',
-            'submission' => $submission,
-            'csrf'       => $this->generateCsrfToken(),
-        ]);
-    }
-
-    // ── POST /submission/update ───────────────────────────────
-    public function update(): void {
-        $this->requireLogin();
-        $this->verifyCsrfToken();
-
-        $id         = (int) ($_POST['id'] ?? 0);
-        $submission = $this->submissionModel->findById('submissions', $id);
-
-        if (!$submission || (int)$submission['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
-        }
-
-        $data = [
-            'description' => $this->post('description'),
-            'link'        => $this->post('link'),
+            'description'  => $this->sanitize($_POST['description'] ?? ''),
+            'link'         => $this->sanitize($_POST['link'] ?? ''),
+            'image'        => $image
         ];
 
-        $image = $this->handleUpload('image', 'submissions');
-        if ($image) $data['image'] = $image;
+        $newId = $this->submissionModel->create($data);
 
-        $this->submissionModel->update($id, $data);
-
-        $this->setFlash('success', 'Participation modifiée.');
-        $this->redirect(BASE_URL . '/index.php?page=submission-show&id=' . $id);
-    }
-
-    // ── POST /submission/delete ───────────────────────────────
-    public function delete(): void {
-        $this->requireLogin();
-        $this->verifyCsrfToken();
-
-        $id         = (int) ($_POST['id'] ?? 0);
-        $submission = $this->submissionModel->findById('submissions', $id);
-
-        if (!$submission || (int)$submission['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+        if ($newId) {
+            $this->setFlash('success', 'Votre participation a été publiée !');
+            $this->redirect('index.php?page=submission-show&id=' . $newId);
+        } else {
+            $this->setFlash('error', 'Une erreur est survenue.');
+            $this->redirect('index.php?page=challenge-show&id=' . $challengeId);
         }
-
-        $challengeId = $submission['challenge_id'];
-        $this->submissionModel->delete($id);
-        $this->setFlash('success', 'Participation supprimée.');
-        $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $challengeId);
     }
 
-    // ── POST /comment/create (AJAX) ────────────────────────────
-    public function addComment(): void {
+    /**
+     * Gère les VOTES via AJAX (Sans rechargement de page)
+     */
+    public function vote() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $submissionId = (int) ($_POST['submission_id'] ?? 0);
-        $content      = $this->post('content');
+        $submissionId = (int)$_POST['submission_id'];
+        
+        // La méthode cast() gère l'ajout ou la suppression du vote (Basculement)
+        $result = $this->voteModel->cast($submissionId, $this->currentUserId());
+        $count  = $this->voteModel->countBySubmission($submissionId);
+
+        // On répond au format JSON pour que le JavaScript puisse mettre à jour la page
+        header('Content-Type: application/json');
+        echo json_encode([
+            'action' => $result['action'], // 'added' ou 'removed'
+            'count'  => $count
+        ]);
+        exit();
+    }
+
+    /**
+     * Gère l'ajout de COMMENTAIRES via AJAX
+     */
+    public function addComment() {
+        $this->requireLogin();
+        $this->verifyCsrfToken();
+
+        $submissionId = (int)$_POST['submission_id'];
+        $content = $this->sanitize($_POST['content'] ?? '');
 
         if (strlen($content) < 2) {
-            $this->json(['error' => 'Commentaire trop court.'], 400);
-            return;
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Le commentaire est trop court.']);
+            exit();
         }
 
         $id = $this->commentModel->create([
             'submission_id' => $submissionId,
             'user_id'       => $this->currentUserId(),
-            'content'       => $content,
+            'content'       => $content
         ]);
 
-        $user = $this->currentUser();
-
-        $this->json([
+        // On renvoie les infos au format JSON pour l'affichage immédiat en JS
+        header('Content-Type: application/json');
+        echo json_encode([
             'success'  => true,
-            'id'       => $id,
-            'content'  => htmlspecialchars($content),
-            'username' => htmlspecialchars($user['username']),
-            'avatar'   => $user['avatar'] ?? null,
-            'date'     => date('d/m/Y H:i'),
+            'username' => $_SESSION['username'],
+            'avatar'   => $_SESSION['user']['avatar'] ?? null,
+            'content'  => $content,
+            'date'     => date('d/m/Y H:i')
+        ]);
+        exit();
+    }
+
+    /**
+     * Liste des meilleures participations (Leaderboard)
+     */
+    public function leaderboard() {
+        $topSubmissions = $this->submissionModel->getTopSubmissions(20);
+
+        $this->render('submission/leaderboard', [
+            'pageTitle'      => 'Classement des meilleurs projets',
+            'topSubmissions' => $topSubmissions
         ]);
     }
 
-    // ── POST /vote (AJAX) ─────────────────────────────────────
-    public function vote(): void {
+    /**
+     * Suppression d'une participation
+     */
+    public function delete() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $submissionId = (int) ($_POST['submission_id'] ?? 0);
-        $result       = $this->voteModel->cast($submissionId, $this->currentUserId());
-        $count        = $this->voteModel->countBySubmission($submissionId);
+        $id = (int)$_POST['id'];
+        $submission = $this->submissionModel->findById('submissions', $id);
 
-        $this->json([
-            'action' => $result['action'],
-            'count'  => $count,
-        ]);
-    }
+        if ($submission && (int)$submission['user_id'] === $this->currentUserId()) {
+            $this->submissionModel->delete($id);
+            $this->setFlash('success', 'Participation supprimée.');
+        }
 
-    // ── GET /leaderboard ─────────────────────────────────────
-    public function leaderboard(): void {
-        $topSubmissions = $this->submissionModel->getTopSubmissions(20);
-
-        $this->render('submission.leaderboard', [
-            'pageTitle'      => 'Classement des meilleures participations',
-            'topSubmissions' => $topSubmissions,
-        ]);
+        $this->redirect('index.php?page=challenges');
     }
 }

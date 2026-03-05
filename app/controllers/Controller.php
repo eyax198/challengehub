@@ -1,124 +1,139 @@
 <?php
 
+/**
+ * Le contrôleur de base (Classe parente)
+ * Contient les fonctions partagées par tous les contrôleurs.
+ */
 abstract class Controller {
 
-    // ─── View Rendering ──────────────────────────────────────
-    protected function render(string $view, array $data = []): void {
-        extract($data, EXTR_SKIP);
-        $viewFile = ROOT_PATH . '/app/views/' . str_replace('.', '/', $view) . '.php';
+    /**
+     * Affiche une vue complète (avec header et footer)
+     * @param string $view Nom du fichier dans app/views/
+     * @param array $data Tableau de variables à passer à la vue
+     */
+    protected function render($view, $data = []) {
+        // Transforme les clés du tableau en variables utilisables dans la vue
+        // Ex: ['titre' => 'Accueil'] crée une variable $titre
+        extract($data);
 
-        if (!file_exists($viewFile)) {
-            die("View not found: {$viewFile}");
+        // On remplace les points par des slashs si besoin (ex: 'auth.login' => 'auth/login')
+        $view = str_replace('.', '/', $view);
+        $viewFile = ROOT_PATH . '/app/views/' . $view . '.php';
+
+        if (file_exists($viewFile)) {
+            require ROOT_PATH . '/app/views/layout/header.php';
+            require $viewFile;
+            require ROOT_PATH . '/app/views/layout/footer.php';
+        } else {
+            die("Erreur : La vue '{$view}' n'existe pas.");
         }
-
-        require ROOT_PATH . '/app/views/layout/header.php';
-        require $viewFile;
-        require ROOT_PATH . '/app/views/layout/footer.php';
     }
 
-    protected function renderPartial(string $view, array $data = []): void {
-        extract($data, EXTR_SKIP);
-        $viewFile = ROOT_PATH . '/app/views/' . str_replace('.', '/', $view) . '.php';
+    /**
+     * Affiche juste un morceau de vue (utilisé pour l'AJAX ou les petits composants)
+     */
+    protected function renderPartial($view, $data = []) {
+        extract($data);
+        $view = str_replace('.', '/', $view);
+        $viewFile = ROOT_PATH . '/app/views/' . $view . '.php';
         if (file_exists($viewFile)) {
             require $viewFile;
         }
     }
 
-    // ─── Redirect ─────────────────────────────────────────────
-    protected function redirect(string $url): void {
+    /**
+     * Redirige vers une autre page
+     */
+    protected function redirect($url) {
         header('Location: ' . $url);
-        exit;
+        exit();
     }
 
-    // ─── Session Helpers ─────────────────────────────────────
-    protected function isLoggedIn(): bool {
+    /**
+     * Vérifie si l'utilisateur est connecté via la session
+     */
+    protected function isLoggedIn() {
         return isset($_SESSION['user_id']);
     }
 
-    protected function requireLogin(): void {
+    /**
+     * Interdit l'accès aux utilisateurs non connectés
+     */
+    protected function requireLogin() {
         if (!$this->isLoggedIn()) {
-            $_SESSION['flash'] = ['type' => 'error', 'message' => 'Vous devez être connecté pour accéder à cette page.'];
-            $this->redirect(BASE_URL . '/index.php?page=login');
+            $this->setFlash('error', 'Vous devez être connecté pour accéder à cette page.');
+            $this->redirect('index.php?page=login');
         }
     }
 
-    protected function currentUserId(): ?int {
+    /**
+     * Récupère l'ID de l'utilisateur en session
+     */
+    protected function currentUserId() {
         return $_SESSION['user_id'] ?? null;
     }
 
-    protected function currentUser(): ?array {
-        return $_SESSION['user'] ?? null;
-    }
-
-    // ─── Flash Messages ────────────────────────────────────────
-    protected function setFlash(string $type, string $message): void {
+    /**
+     * Enregistre un message flash (pour afficher une notification après une action)
+     */
+    protected function setFlash($type, $message) {
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
     }
 
-    // ─── CSRF ────────────────────────────────────────────────
-    protected function generateCsrfToken(): string {
-        if (empty($_SESSION[CSRF_TOKEN_NAME])) {
-            $_SESSION[CSRF_TOKEN_NAME] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION[CSRF_TOKEN_NAME];
-    }
-
-    protected function verifyCsrfToken(): void {
-        $token = $_POST[CSRF_TOKEN_NAME] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-        if (!hash_equals($_SESSION[CSRF_TOKEN_NAME] ?? '', $token)) {
-            http_response_code(403);
-            $this->setFlash('error', 'Requête invalide (CSRF).');
-            $this->redirect($_SERVER['HTTP_REFERER'] ?? BASE_URL . '/index.php');
-        }
-    }
-
-    // ─── Input Sanitization ───────────────────────────────────
-    protected function sanitize(string $value): string {
+    /**
+     * Nettoie une chaîne de caractères contre les failles XSS
+     */
+    protected function sanitize($value) {
         return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
     }
 
-    protected function post(string $key, string $default = ''): string {
-        return isset($_POST[$key]) ? $this->sanitize($_POST[$key]) : $default;
+    /**
+     * Génère un jeton de sécurité CSRF pour les formulaires
+     */
+    protected function generateCsrfToken() {
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = md5(uniqid(rand(), true));
+        }
+        return $_SESSION['csrf_token'];
     }
 
-    protected function get(string $key, string $default = ''): string {
-        return isset($_GET[$key]) ? $this->sanitize($_GET[$key]) : $default;
+    /**
+     * Vérifie le jeton de sécurité CSRF lors de l'envoi d'un formulaire
+     */
+    protected function verifyCsrfToken() {
+        $token = $_POST['csrf_token'] ?? '';
+        if (empty($_SESSION['csrf_token']) || $token !== $_SESSION['csrf_token']) {
+            $this->setFlash('error', 'Erreur de sécurité (CSRF).');
+            $this->redirect('index.php');
+        }
     }
 
-    // ─── JSON Response ────────────────────────────────────────
-    protected function json(array $data, int $code = 200): void {
-        http_response_code($code);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
-    }
-
-    // ─── File Upload ─────────────────────────────────────────
-    protected function handleUpload(string $inputName, string $subfolder = ''): string|null {
-        if (empty($_FILES[$inputName]['tmp_name'])) return null;
-
-        $file     = $_FILES[$inputName];
-        $finfo    = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
-
-        if (!in_array($mimeType, ALLOWED_TYPES)) {
-            $this->setFlash('error', 'Type de fichier non autorisé.');
+    /**
+     * Gère l'upload d'un fichier (image)
+     * @param string $inputName Nom du champ <input type="file">
+     * @return string|null Nom du fichier enregistré ou null
+     */
+    protected function handleUpload($inputName) {
+        if (empty($_FILES[$inputName]['tmp_name'])) {
             return null;
         }
 
-        if ($file['size'] > MAX_FILE_SIZE) {
-            $this->setFlash('error', 'Fichier trop volumineux (max 5 Mo).');
+        $file = $_FILES[$inputName];
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+        // Vérification simplifiée de l'extension
+        if (!in_array($ext, $allowed)) {
+            $this->setFlash('error', 'Format d\'image non autorisé.');
             return null;
         }
 
-        $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = uniqid('img_', true) . '.' . strtolower($ext);
-        $dir      = UPLOAD_DIR . ($subfolder ? rtrim($subfolder, '/') . '/' : '');
+        // Création d'un nom unique (timestamp + nom d'origine nettoyé)
+        $filename = time() . '_' . preg_replace('/[^a-z0-9.]/', '_', strtolower($file['name']));
+        $destination = ROOT_PATH . '/public/images/uploads/' . $filename;
 
-        if (!is_dir($dir)) mkdir($dir, 0755, true);
-
-        if (move_uploaded_file($file['tmp_name'], $dir . $filename)) {
-            return ($subfolder ? rtrim($subfolder, '/') . '/' : '') . $filename;
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            return $filename;
         }
 
         return null;

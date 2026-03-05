@@ -1,28 +1,33 @@
 <?php
 
-require_once __DIR__ . '/Controller.php';
 require_once ROOT_PATH . '/app/models/User.php';
 
+/**
+ * Contrôleur User - Gère les profils utilisateurs et leurs paramètres
+ */
 class UserController extends Controller {
 
-    private User $userModel;
+    private $userModel;
 
     public function __construct() {
         $this->userModel = new User();
     }
 
-    // ── GET /profile?id=X ────────────────────────────────────
-    public function showProfile(): void {
-        $id   = (int) ($_GET['id'] ?? $this->currentUserId());
-        $user = $this->userModel->findById('users', $id);
+    /**
+     * Affiche le profil d'un utilisateur
+     */
+    public function showProfile() {
+        // Si aucun ID n'est passé en URL, on affiche le profil de l'utilisateur connecté
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : $this->currentUserId();
+        
+        $user = $this->userModel->findById($id);
 
         if (!$user) {
             $this->setFlash('error', 'Utilisateur introuvable.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+            $this->redirect('index.php?page=challenges');
         }
 
-        // Load user's challenges & submissions
+        // On charge les modèles pour afficher ses défis et ses participations
         require_once ROOT_PATH . '/app/models/Challenge.php';
         require_once ROOT_PATH . '/app/models/Submission.php';
 
@@ -31,113 +36,104 @@ class UserController extends Controller {
 
         $challenges  = $challengeModel->getByUser($id);
         $submissions = $submissionModel->getByUser($id);
-        $stats       = $this->userModel->getStats($id);
+        
+        // Récupération des statistiques (nombre de votes reçus, etc.)
+        $stats = $this->userModel->getStats($id);
 
-        $this->render('user.profile', [
-            'pageTitle'   => htmlspecialchars($user['username']) . ' — Profil',
+        $this->render('user/profile', [
+            'pageTitle'   => $user['username'] . ' — Profil',
             'profileUser' => $user,
             'challenges'  => $challenges,
             'submissions' => $submissions,
             'stats'       => $stats,
-            'csrf'        => $this->generateCsrfToken(),
+            'csrf'        => $this->generateCsrfToken() // Pour la suppression de compte
         ]);
     }
 
-    // ── GET /profile/edit ─────────────────────────────────────
-    public function showEditProfile(): void {
+    /**
+     * Affiche le formulaire de modification du profil
+     */
+    public function showEditProfile() {
         $this->requireLogin();
-        $user = $this->userModel->findById('users', $this->currentUserId());
-        $csrf = $this->generateCsrfToken();
-        $this->render('user.edit_profile', [
-            'pageTitle' => 'Modifier le profil',
+        
+        $user = $this->userModel->findById($this->currentUserId());
+        
+        $this->render('user/edit_profile', [
+            'pageTitle' => 'Paramètres du compte',
             'user'      => $user,
-            'csrf'      => $csrf,
+            'csrf'      => $this->generateCsrfToken()
         ]);
     }
 
-    // ── POST /profile/edit ────────────────────────────────────
-    public function updateProfile(): void {
+    /**
+     * Traite la mise à jour (POST)
+     */
+    public function updateProfile() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $userId   = $this->currentUserId();
-        $username = $this->post('username');
-        $email    = $this->post('email');
-        $bio      = $this->post('bio');
-        $password = $_POST['password'] ?? '';
+        $userId = $this->currentUserId();
+        
+        // Préparation des données
+        $data = [
+            'username' => $this->sanitize($_POST['username'] ?? ''),
+            'email'    => $this->sanitize($_POST['email'] ?? ''),
+            'bio'      => $this->sanitize($_POST['bio'] ?? '')
+        ];
 
-        $errors = [];
-
-        if (strlen($username) < 3) {
-            $errors[] = 'Le nom d\'utilisateur est trop court.';
-        }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Email invalide.';
-        }
-
-        // Check uniqueness only for OTHER users
-        $byEmail    = $this->userModel->findByEmail($email);
-        $byUsername = $this->userModel->findByUsername($username);
-
-        if ($byEmail && (int)$byEmail['id'] !== $userId) {
-            $errors[] = 'Cet email est déjà utilisé.';
-        }
-        if ($byUsername && (int)$byUsername['id'] !== $userId) {
-            $errors[] = 'Ce nom d\'utilisateur est déjà pris.';
+        // On gère l'avatar si une nouvelle image est envoyée
+        $avatar = $this->handleUpload('avatar');
+        if ($avatar) {
+            $data['avatar'] = $avatar;
         }
 
-        if (!empty($errors)) {
-            $_SESSION['form_errors'] = $errors;
-            $this->redirect(BASE_URL . '/index.php?page=edit-profile');
-            return;
+        // On gère le changement de mot de passe (si rempli)
+        if (!empty($_POST['password'])) {
+            $data['password'] = $_POST['password'];
         }
 
-        $data = compact('username', 'email', 'bio');
-
-        if (!empty($password)) {
-            if (strlen($password) < 8) {
-                $this->setFlash('error', 'Le mot de passe doit comporter au moins 8 caractères.');
-                $this->redirect(BASE_URL . '/index.php?page=edit-profile');
-                return;
-            }
-            $data['password'] = $password;
+        // Mise à jour en base de données
+        if ($this->userModel->update($userId, $data)) {
+            // Mise à jour des informations en session pour que le changement soit immédiat
+            $_SESSION['username'] = $data['username'];
+            if (isset($data['avatar'])) $_SESSION['user']['avatar'] = $data['avatar'];
+            
+            $this->setFlash('success', 'Profil mis à jour.');
+            $this->redirect('index.php?page=profile');
+        } else {
+            $this->setFlash('error', 'Aucun changement effectué.');
+            $this->redirect('index.php?page=edit-profile');
         }
-
-        $avatar = $this->handleUpload('avatar', 'avatars');
-        if ($avatar) $data['avatar'] = $avatar;
-
-        $this->userModel->update($userId, $data);
-
-        // Update session
-        $_SESSION['user']['username'] = $username;
-        $_SESSION['user']['email']    = $email;
-        if ($avatar) $_SESSION['user']['avatar'] = $avatar;
-
-        $this->setFlash('success', 'Profil mis à jour avec succès.');
-        $this->redirect(BASE_URL . '/index.php?page=profile');
     }
 
-    // ── POST /profile/delete ──────────────────────────────────
-    public function deleteAccount(): void {
+    /**
+     * Supprime définitivement un compte
+     */
+    public function deleteAccount() {
         $this->requireLogin();
-        $this->verifyCsrfToken();
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->verifyCsrfToken();
+            
+            $userId = $this->currentUserId();
+            $password = $_POST['password'] ?? '';
+            $user = $this->userModel->findById($userId);
 
-        $userId   = $this->currentUserId();
-        $password = $_POST['password'] ?? '';
-        $user     = $this->userModel->findById('users', $userId);
-
-        if (!password_verify($password, $user['password'])) {
-            $this->setFlash('error', 'Mot de passe incorrect. Suppression annulée.');
-            $this->redirect(BASE_URL . '/index.php?page=edit-profile');
-            return;
+            // Pour supprimer, l'utilisateur doit confirmer avec son mot de passe actuel
+            if (password_verify($password, $user['password'])) {
+                $this->userModel->delete($userId);
+                
+                // Déconnexion forcée
+                session_unset();
+                session_destroy();
+                
+                session_start();
+                $this->setFlash('success', 'Votre compte a été définitivement supprimé.');
+                $this->redirect('index.php');
+            } else {
+                $this->setFlash('error', 'Mot de passe incorrect.');
+                $this->redirect('index.php?page=edit-profile');
+            }
         }
-
-        $this->userModel->delete($userId);
-
-        session_unset();
-        session_destroy();
-
-        $this->setFlash('success', 'Votre compte a été supprimé.');
-        $this->redirect(BASE_URL . '/index.php?page=home');
     }
 }

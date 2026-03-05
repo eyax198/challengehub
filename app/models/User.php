@@ -2,47 +2,77 @@
 
 require_once __DIR__ . '/Model.php';
 
+/**
+ * Modèle User - Gère les données des utilisateurs
+ */
 class User extends Model {
 
-    // ── Create ────────────────────────────────────────────────
-    public function create(array $data): int|false {
-        $hashed = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+    /**
+     * Crée un nouvel utilisateur (Inscription)
+     */
+    public function create($data) {
+        // Hachage sécurisé du mot de passe
+        $hashed = password_hash($data['password'], PASSWORD_DEFAULT);
 
-        $this->query(
-            "INSERT INTO users (username, email, password, avatar, bio, created_at)
-             VALUES (?, ?, ?, ?, ?, NOW())",
-            [
-                $data['username'],
-                $data['email'],
-                $hashed,
-                $data['avatar']  ?? null,
-                $data['bio']     ?? null,
-            ]
-        );
+        $sql = "INSERT INTO users (username, email, password, avatar, bio, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())";
+        
+        $params = [
+            $data['username'],
+            $data['email'],
+            $hashed,
+            $data['avatar']  ?? null,
+            $data['bio']     ?? null,
+        ];
 
-        return (int) $this->lastInsertId();
+        $this->query($sql, $params);
+
+        return $this->lastInsertId();
     }
 
-    // ── Read ─────────────────────────────────────────────────
-    public function findById(string $table = 'users', int $id = 0): array|false {
-        return $this->query("SELECT * FROM users WHERE id = ?", [$id])->fetch();
+    /**
+     * Trouve un utilisateur par son ID
+     */
+    public function findById($id) {
+        $stmt = $this->query("SELECT * FROM users WHERE id = ?", [$id]);
+        return $stmt->fetch();
     }
 
-    public function findByEmail(string $email): array|false {
-        return $this->query("SELECT * FROM users WHERE email = ?", [$email])->fetch();
+    /**
+     * Récupère tous les utilisateurs (utile pour les statistiques)
+     */
+    public function getAll() {
+        return $this->query("SELECT * FROM users")->fetchAll();
     }
 
-    public function findByUsername(string $username): array|false {
-        return $this->query("SELECT * FROM users WHERE username = ?", [$username])->fetch();
+    /**
+     * Trouve un utilisateur par son email (utile pour la connexion)
+     */
+    public function findByEmail($email) {
+        $stmt = $this->query("SELECT * FROM users WHERE email = ?", [$email]);
+        return $stmt->fetch();
     }
 
-    public function getAll(): array {
-        return $this->query("SELECT id, username, email, avatar, bio, created_at FROM users ORDER BY created_at DESC")->fetchAll();
+    /**
+     * Vérifie les identifiants de connexion
+     */
+    public function authenticate($email, $password) {
+        $user = $this->findByEmail($email);
+        
+        // On vérifie si l'utilisateur existe ET si le mot de passe correspond au hachage
+        if ($user && password_verify($password, $user['password'])) {
+            return $user;
+        }
+        
+        return false;
     }
 
-    public function getStats(int $userId): array {
-        $challenges   = $this->query("SELECT COUNT(*) FROM challenges WHERE user_id = ?",   [$userId])->fetchColumn();
-        $submissions  = $this->query("SELECT COUNT(*) FROM submissions WHERE user_id = ?",  [$userId])->fetchColumn();
+    /**
+     * Récupère les statistiques d'un utilisateur (Défis, participations...)
+     */
+    public function getStats($userId) {
+        $challenges    = $this->query("SELECT COUNT(*) FROM challenges WHERE user_id = ?", [$userId])->fetchColumn();
+        $submissions   = $this->query("SELECT COUNT(*) FROM submissions WHERE user_id = ?", [$userId])->fetchColumn();
         $votesReceived = $this->query(
             "SELECT COUNT(*) FROM votes v
              JOIN submissions s ON v.submission_id = s.id
@@ -51,46 +81,42 @@ class User extends Model {
         )->fetchColumn();
 
         return [
-            'challenges'    => (int) $challenges,
-            'submissions'   => (int) $submissions,
+            'challenges'     => (int) $challenges,
+            'submissions'    => (int) $submissions,
             'votes_received' => (int) $votesReceived,
         ];
     }
 
-    // ── Authenticate ─────────────────────────────────────────
-    public function authenticate(string $email, string $password): array|false {
-        $user = $this->findByEmail($email);
-        if ($user && password_verify($password, $user['password'])) {
-            return $user;
-        }
-        return false;
-    }
-
-    // ── Update ────────────────────────────────────────────────
-    public function update(int $id, array $data): bool {
+    /**
+     * Met à jour les informations du profil
+     */
+    public function update($id, $data) {
         $fields = [];
         $params = [];
 
+        // On construit la requête dynamiquement selon les champs remplis
         if (!empty($data['username'])) { $fields[] = 'username = ?'; $params[] = $data['username']; }
         if (!empty($data['email']))    { $fields[] = 'email = ?';    $params[] = $data['email'];    }
         if (!empty($data['bio']))      { $fields[] = 'bio = ?';      $params[] = $data['bio'];      }
         if (!empty($data['avatar']))   { $fields[] = 'avatar = ?';   $params[] = $data['avatar'];   }
+        
         if (!empty($data['password'])) {
             $fields[] = 'password = ?';
-            $params[] = password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]);
+            $params[] = password_hash($data['password'], PASSWORD_DEFAULT);
         }
 
         if (empty($fields)) return false;
 
         $params[] = $id;
-        return $this->query(
-            "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?",
-            $params
-        )->rowCount() > 0;
+        $sql = "UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?";
+        
+        return $this->query($sql, $params)->rowCount() > 0;
     }
 
-    // ── Delete ────────────────────────────────────────────────
-    public function delete(int $id): bool {
+    /**
+     * Supprime un compte utilisateur
+     */
+    public function delete($id) {
         return $this->deleteById('users', $id);
     }
 }

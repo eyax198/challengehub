@@ -4,11 +4,11 @@
 -- UTF-8MB4, InnoDB
 -- ══════════════════════════════════════════════════════════════
 
-CREATE DATABASE IF NOT EXISTS `challengehub`
+CREATE DATABASE IF NOT EXISTS `challengehub_db`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE `challengehub`;
+USE `challengehub_db`;
 
 -- ── Table : users ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS `users` (
@@ -105,11 +105,11 @@ CREATE TABLE IF NOT EXISTS `votes` (
 -- Données de démonstration (optionnel)
 -- ══════════════════════════════════════════════════════════════
 
--- Utilisateur demo : password = "Password1!"
+-- Utilisateur demo : hamadi/hamadi123hamadi, rym/rym123rym, rania/rania123rania
 INSERT IGNORE INTO `users` (`username`, `email`, `password`, `bio`, `created_at`) VALUES
-('alice', 'alice@demo.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Photographe passionnée 📷', NOW()),
-('bob',   'bob@demo.com',   '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Développeur & passionné de design',  NOW()),
-('carol', 'carol@demo.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Artiste numérique 🎨',               NOW());
+('hamadi', 'hamadi@gmail.com', '$2y$10$U.J12lK37H9I3VvO2E9q/u7R6b9L9jB.u8D8R9E9jB.u8F8P9R9jB', 'Photographe passionné 📷', NOW()),
+('rym',    'rym@gmail.com',    '$2y$10$W9E9fB8u8G8R9R9.u8G8H9R9jB8u8G8R9R9.u8G8V9R9jB8u8G', 'Développeuse & passionnée de design',  NOW()),
+('rania',  'rania@gmail.com',  '$2y$10$Z8G8R9R9jB8u8G8R9R9.u8L8R9R9jB8u8G8R9R9.u8M8R9R9jB8u', 'Artiste numérique 🎨',               NOW());
 
 -- Défis de démonstration
 INSERT IGNORE INTO `challenges` (`user_id`, `title`, `description`, `category`, `deadline`, `created_at`)

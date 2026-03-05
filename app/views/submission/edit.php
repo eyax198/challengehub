@@ -1,46 +1,50 @@
+<!-- ═══════════════════════════════════════════════════
+     MODIFIER MA PARTICIPATION — ChallengeHub
+     ═══════════════════════════════════════════════════ -->
+
 <div class="page-header">
   <div class="page-header__inner">
-    <h1>✏️ Modifier la participation</h1>
-    <p>Mettez à jour votre soumission pour le défi <strong><?= htmlspecialchars($submission['challenge_title']) ?></strong></p>
+    <h1>✏️ Modifier ma participation</h1>
+    <p>Mettez à jour votre projet pour le défi : <strong><?= htmlspecialchars($submission['challenge_title'] ?? '') ?></strong></p>
   </div>
 </div>
 
 <div class="container section">
-  <div class="container-md" style="margin:0 auto;">
+  <div class="auth-card" style="max-width:700px; margin:0 auto; padding:2rem;">
+    
+    <form action="index.php?page=submission-edit" method="POST" enctype="multipart/form-data">
+        <!-- Sécurité CSRF -->
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+        <input type="hidden" name="id" value="<?= $submission['id'] ?>">
 
-    <form method="POST" action="<?= BASE_URL ?>/index.php?page=submission-edit" enctype="multipart/form-data" id="edit-submission-form" novalidate>
-      <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= htmlspecialchars($csrf) ?>">
-      <input type="hidden" name="id" value="<?= $submission['id'] ?>">
-
-      <div class="glass-panel" style="padding:2rem; display:flex; flex-direction:column; gap:1.5rem;">
-
+        <!-- Description du projet -->
         <div class="form-group">
-          <label class="form-label" for="sub-description">Description de ma participation *</label>
-          <textarea id="sub-description" name="description" class="form-control" rows="6" required minlength="10"><?= htmlspecialchars($submission['description']) ?></textarea>
+            <label class="form-label" for="description">Description détaillée du projet</label>
+            <textarea id="description" name="description" class="form-control" rows="6" 
+                      placeholder="Expliquez brièvement votre travail..." required><?= htmlspecialchars($submission['description']) ?></textarea>
         </div>
 
+        <!-- Lien externe -->
         <div class="form-group">
-          <label class="form-label" for="sub-link">Lien externe (optionnel)</label>
-          <input type="url" id="sub-link" name="link" class="form-control" value="<?= htmlspecialchars($submission['link'] ?? '') ?>" placeholder="https://...">
+            <label class="form-label" for="link">Lien vers votre projet (Optionnel)</label>
+            <input type="url" id="link" name="link" class="form-control" 
+                   value="<?= htmlspecialchars($submission['link'] ?? '') ?>" placeholder="https://votre-projet.com">
         </div>
 
+        <!-- Image illustrative -->
         <div class="form-group">
-          <label class="form-label">Nouvelle image (optionnel — laissez vide pour garder l'actuelle)</label>
-          <?php if (!empty($submission['image'])): ?>
-            <img src="<?= UPLOAD_URL . htmlspecialchars($submission['image']) ?>" alt="Image actuelle" style="max-height:150px; border-radius:var(--radius-md); margin-bottom:.75rem;">
-          <?php endif; ?>
-          <input type="file" name="image" id="sub-image" class="form-control" accept="image/*">
+            <label class="form-label" for="image">Image illustrative (Laissez vide pour garder l'actuelle)</label>
+            <?php if (!empty($submission['image'])): ?>
+                <p style="font-size:.8rem; color:var(--clr-text-dim); margin-bottom:.5rem;">Image actuelle : <?= htmlspecialchars($submission['image']) ?></p>
+            <?php endif; ?>
+            <input type="file" id="image" name="image" class="form-control" style="font-size:.85rem; padding:.5rem;">
         </div>
 
-        <div class="flex gap-2" style="justify-content:flex-end;">
-          <a href="<?= BASE_URL ?>/index.php?page=submission-show&id=<?= $submission['id'] ?>" class="btn btn-ghost">Annuler</a>
-          <button type="submit" class="btn btn-primary" id="btn-edit-sub-submit">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            Enregistrer
-          </button>
+        <!-- Boutons d'action -->
+        <div class="flex gap-1" style="margin-top:2.5rem; border-top:1px solid var(--clr-border); padding-top:2rem;">
+            <a href="index.php?page=submission-show&id=<?= $submission['id'] ?>" class="btn btn-ghost" style="flex:1; justify-content:center;">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-lg" style="flex:2; justify-content:center;">✅ Sauvegarder les modifications</button>
         </div>
-
-      </div>
     </form>
 
   </div>

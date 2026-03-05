@@ -1,32 +1,22 @@
 <?php
 
-declare(strict_types=1);
+/**
+ * INDEX.PHP - Le Front Controller
+ * C'est le point d'entrée unique de l'application.
+ * Il initialise la session, charge les fichiers et gère les routes.
+ */
 
-// ─── Bootstrap ───────────────────────────────────────────────
+// 1. Démarrage de la session (pour gérer la connexion utilisateur)
+session_start();
+
+// 2. Définition du chemin racine du projet
 define('ROOT_PATH', __DIR__);
 
+// 3. Inclusion des fichiers de configuration
 require_once ROOT_PATH . '/config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 
-// Session hardening
-ini_set('session.cookie_httponly', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_samesite', 'Lax');
-
-session_name(SESSION_NAME);
-session_set_cookie_params([
-    'lifetime' => SESSION_LIFETIME,
-    'path'     => '/',
-    'httponly' => true,
-    'samesite' => 'Lax',
-]);
-session_start();
-
-// ─── Simple Router ────────────────────────────────────────────
-$page   = $_GET['page']   ?? 'home';
-$action = $_GET['action'] ?? null;
-
-// Load controllers
+// 4. Chargement de tous les contrôleurs
 require_once ROOT_PATH . '/app/controllers/Controller.php';
 require_once ROOT_PATH . '/app/controllers/HomeController.php';
 require_once ROOT_PATH . '/app/controllers/AuthController.php';
@@ -34,54 +24,133 @@ require_once ROOT_PATH . '/app/controllers/UserController.php';
 require_once ROOT_PATH . '/app/controllers/ChallengeController.php';
 require_once ROOT_PATH . '/app/controllers/SubmissionController.php';
 
+// 5. Instanciation des contrôleurs
 $authCtrl       = new AuthController();
 $userCtrl       = new UserController();
 $challengeCtrl  = new ChallengeController();
 $submissionCtrl = new SubmissionController();
 $homeCtrl       = new HomeController();
 
-// ─── Route Table ─────────────────────────────────────────────
-$routes = [
-    // Auth
-    'login'    => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $authCtrl->login()        : $authCtrl->showLogin(),
-    'register' => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $authCtrl->register()     : $authCtrl->showRegister(),
-    'logout'   => fn() => $authCtrl->logout(),
+// 6. Récupération de la page demandée depuis l'URL (ex: ?page=login)
+// Si aucune page n'est précisée, on va sur 'home'
+$page = $_GET['page'] ?? 'home';
 
-    // Home
-    'home'     => fn() => $homeCtrl->index(),
+// 7. ROUTEUR : On utilise un switch/case pour diriger l'utilisateur au bon endroit
+switch ($page) {
+    
+    // --- ACCUEIL ---
+    case 'home':
+        $homeCtrl->index();
+        break;
 
-    // Challenges
-    'challenges'       => fn() => $challengeCtrl->index(),
-    'challenge-show'   => fn() => $challengeCtrl->show(),
-    'challenge-create' => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $challengeCtrl->create()   : $challengeCtrl->showCreate(),
-    'challenge-edit'   => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $challengeCtrl->update()   : $challengeCtrl->showEdit(),
-    'challenge-delete' => fn() => $challengeCtrl->delete(),
-
-    // Submissions
-    'submission-show'   => fn() => $submissionCtrl->show(),
-    'submission-create' => fn() => $submissionCtrl->create(),
-    'submission-edit'   => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $submissionCtrl->update() : $submissionCtrl->showEdit(),
-    'submission-delete' => fn() => $submissionCtrl->delete(),
-    'leaderboard'       => fn() => $submissionCtrl->leaderboard(),
-
-    // AJAX endpoints
-    'vote'        => fn() => $submissionCtrl->vote(),
-    'add-comment' => fn() => $submissionCtrl->addComment(),
-
-    // User
-    'profile'      => fn() => $userCtrl->showProfile(),
-    'edit-profile' => fn() => $_SERVER['REQUEST_METHOD'] === 'POST' ? $userCtrl->updateProfile()  : $userCtrl->showEditProfile(),
-    'delete-account' => fn() => $userCtrl->deleteAccount(),
-];
-
-if (isset($routes[$page])) {
-    ($routes[$page])();
-} else {
-    http_response_code(404);
-    require ROOT_PATH . '/app/controllers/Controller.php';
-    (new class extends Controller {
-        public function notFound(): void {
-            $this->render('errors.404', ['pageTitle' => 'Page introuvable']);
+    // --- AUTHENTIFICATION ---
+    case 'login':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authCtrl->login(); // Traitement du formulaire
+        } else {
+            $authCtrl->showLogin(); // Affichage du formulaire
         }
-    })->notFound();
+        break;
+
+    case 'register':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authCtrl->register();
+        } else {
+            $authCtrl->showRegister();
+        }
+        break;
+
+    case 'logout':
+        $authCtrl->logout();
+        break;
+
+    // --- DÉFIS (CHALLENGES) ---
+    case 'challenges':
+        $challengeCtrl->index();
+        break;
+
+    case 'challenge-show':
+        $challengeCtrl->show();
+        break;
+
+    case 'challenge-create':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $challengeCtrl->create();
+        } else {
+            $challengeCtrl->showCreate();
+        }
+        break;
+
+    case 'challenge-edit':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $challengeCtrl->update();
+        } else {
+            $challengeCtrl->showEdit();
+        }
+        break;
+
+    case 'challenge-delete':
+        $challengeCtrl->delete();
+        break;
+
+    // --- PARTICIPATIONS (SUBMISSIONS) ---
+    case 'submission-show':
+        $submissionCtrl->show();
+        break;
+
+    case 'submission-create':
+        $submissionCtrl->create();
+        break;
+
+    case 'submission-edit':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $submissionCtrl->update();
+        } else {
+            $submissionCtrl->showEdit();
+        }
+        break;
+
+    case 'submission-delete':
+        $submissionCtrl->delete();
+        break;
+
+    case 'leaderboard':
+        $submissionCtrl->leaderboard();
+        break;
+
+    // --- ACTIONS AJAX (VOTES / COMMENTAIRES) ---
+    case 'vote':
+        $submissionCtrl->vote();
+        break;
+
+    case 'add-comment':
+        $submissionCtrl->addComment();
+        break;
+
+    // --- UTILISATEUR / PROFIL ---
+    case 'profile':
+        $userCtrl->showProfile();
+        break;
+
+    case 'edit-profile':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userCtrl->updateProfile();
+        } else {
+            $userCtrl->showEditProfile();
+        }
+        break;
+
+    case 'delete-account':
+        $userCtrl->deleteAccount();
+        break;
+
+    // --- ERREUR 404 ---
+    default:
+        http_response_code(404);
+        echo "<div style='text-align:center; padding:50px; font-family:sans-serif;'>
+                <h1>404 - Page non trouvée</h1>
+                <p>La page que vous recherchez n'existe pas.</p>
+                <p><a href='index.php'>Retour à l'accueil</a></p>
+              </div>";
+        break;
 }

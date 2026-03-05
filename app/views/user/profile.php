@@ -1,132 +1,101 @@
-<?php $isOwnProfile = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$profileUser['id']; ?>
+<!-- ═══════════════════════════════════════════════════
+     PROFIL UTILISATEUR — ChallengeHub
+     ═══════════════════════════════════════════════════ -->
 
-<div class="container section">
-
-  <!-- Profile Header -->
-  <div class="profile-header" id="profile-header">
-    <?php if (!empty($profileUser['avatar'])): ?>
-      <img src="<?= UPLOAD_URL . htmlspecialchars($profileUser['avatar']) ?>" alt="Avatar" class="avatar-lg" style="border:3px solid var(--clr-primary);">
-    <?php else: ?>
-      <div class="avatar-placeholder lg"><?= strtoupper(substr($profileUser['username'], 0, 1)) ?></div>
-    <?php endif; ?>
-
-    <div class="profile-header__info">
-      <h1 class="profile-header__name"><?= htmlspecialchars($profileUser['username']) ?></h1>
-      <?php if (!empty($profileUser['bio'])): ?>
-        <p class="text-muted" style="margin-top:.35rem; font-size:.9rem;"><?= htmlspecialchars($profileUser['bio']) ?></p>
-      <?php endif; ?>
-      <p class="text-dim" style="font-size:.78rem; margin-top:.5rem;">Membre depuis <?= (new DateTime($profileUser['created_at']))->format('F Y') ?></p>
-
-      <div class="profile-header__stats">
-        <div class="profile-stat">
-          <div class="profile-stat__value"><?= $stats['challenges'] ?></div>
-          <div class="profile-stat__label">Défis</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat__value"><?= $stats['submissions'] ?></div>
-          <div class="profile-stat__label">Participations</div>
-        </div>
-        <div class="profile-stat">
-          <div class="profile-stat__value"><?= $stats['votes_received'] ?></div>
-          <div class="profile-stat__label">Votes reçus</div>
-        </div>
-      </div>
+<div class="page-header">
+  <div class="page-header__inner">
+    <div class="flex items-center gap-2 mb-1.5">
+       <span style="font-size:3rem;">👤</span>
+       <div>
+         <h1 style="margin-bottom:0;"><?= htmlspecialchars($profileUser['username']) ?></h1>
+         <p class="text-dim">Membre depuis le : <?= date('d/m/Y', strtotime($profileUser['created_at'])) ?></p>
+       </div>
     </div>
-
-    <?php if ($isOwnProfile): ?>
-    <div class="flex flex-col gap-1" style="flex-shrink:0;">
-      <a href="<?= BASE_URL ?>/index.php?page=edit-profile" class="btn btn-ghost btn-sm" id="btn-edit-profile">✏️ Modifier le profil</a>
-      <a href="<?= BASE_URL ?>/index.php?page=challenge-create" class="btn btn-primary btn-sm" id="btn-create-from-profile">+ Créer un défi</a>
+    
+    <!-- STATISTIQUES RAPIDES -->
+    <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+       <span class="badge badge-primary">⚡ <?= count($challenges) ?> défis lancés</span>
+       <span class="badge badge-accent">🚀 <?= count($submissions) ?> participations envoyées</span>
     </div>
-    <?php endif; ?>
   </div>
-
-  <!-- Tabs -->
-  <div class="tabs" id="profile-tabs">
-    <button class="tab active" id="tab-challenges" onclick="switchTab('challenges', this)">
-      ⚡ Défis créés (<?= count($challenges) ?>)
-    </button>
-    <button class="tab" id="tab-submissions" onclick="switchTab('submissions', this)">
-      🎨 Participations (<?= count($submissions) ?>)
-    </button>
-  </div>
-
-  <!-- Challenges Tab -->
-  <div id="section-challenges">
-    <?php if (empty($challenges)): ?>
-      <div class="empty-state">
-        <div class="empty-state__icon">⚡</div>
-        <h3>Aucun défi créé</h3>
-        <?php if ($isOwnProfile): ?>
-          <p><a href="<?= BASE_URL ?>/index.php?page=challenge-create" style="color:var(--clr-primary-l)">Créez votre premier défi !</a></p>
-        <?php endif; ?>
-      </div>
-    <?php else: ?>
-      <div class="grid grid-3 gap-md">
-        <?php foreach ($challenges as $ch): ?>
-        <article class="card" id="profile-challenge-<?= $ch['id'] ?>">
-          <div class="card__body">
-            <span class="card__category"><?= htmlspecialchars($ch['category']) ?></span>
-            <h3 class="card__title">
-              <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $ch['id'] ?>" style="color:inherit;">
-                <?= htmlspecialchars($ch['title']) ?>
-              </a>
-            </h3>
-            <div class="flex gap-1 mt-2">
-              <span class="badge badge-success"><?= (int)$ch['submissions_count'] ?> participation<?= $ch['submissions_count'] > 1 ? 's' : '' ?></span>
-            </div>
-          </div>
-          <div class="card__footer">
-            <span class="text-dim" style="font-size:.75rem;"><?= (new DateTime($ch['created_at']))->format('d/m/Y') ?></span>
-            <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $ch['id'] ?>" class="btn btn-ghost btn-sm">Voir →</a>
-          </div>
-        </article>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-  </div>
-
-  <!-- Submissions Tab (hidden by default) -->
-  <div id="section-submissions" style="display:none;">
-    <?php if (empty($submissions)): ?>
-      <div class="empty-state">
-        <div class="empty-state__icon">🎨</div>
-        <h3>Aucune participation</h3>
-        <p><a href="<?= BASE_URL ?>/index.php?page=challenges" style="color:var(--clr-primary-l)">Explorez les défis →</a></p>
-      </div>
-    <?php else: ?>
-      <div class="grid grid-3 gap-md">
-        <?php foreach ($submissions as $sub): ?>
-        <article class="submission-card" id="profile-submission-<?= $sub['id'] ?>">
-          <div class="card__body">
-            <p class="text-dim" style="font-size:.75rem; margin-bottom:.4rem;">
-              Pour : <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $sub['challenge_id'] ?>" style="color:var(--clr-primary-l);"><?= htmlspecialchars($sub['challenge_title']) ?></a>
-            </p>
-            <p style="font-size:.875rem; color:var(--clr-text-muted); line-height:1.55;">
-              <?= htmlspecialchars(mb_substr($sub['description'], 0, 120)) ?>...
-            </p>
-            <div class="flex gap-1 mt-2">
-              <span class="badge badge-primary">⭐ <?= (int)$sub['vote_count'] ?></span>
-            </div>
-          </div>
-          <div class="card__footer">
-            <span class="text-dim" style="font-size:.75rem;"><?= (new DateTime($sub['created_at']))->format('d/m/Y') ?></span>
-            <a href="<?= BASE_URL ?>/index.php?page=submission-show&id=<?= $sub['id'] ?>" class="btn btn-ghost btn-sm">Voir →</a>
-          </div>
-        </article>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-  </div>
-
 </div>
 
-<script>
-function switchTab(name, btn) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
+<div class="container section">
+  <div style="display:grid; grid-template-columns:300px 1fr; gap:2.5rem; align-items:start;">
 
-    document.getElementById('section-challenges').style.display  = name === 'challenges'  ? 'block' : 'none';
-    document.getElementById('section-submissions').style.display = name === 'submissions' ? 'block' : 'none';
-}
-</script>
+    <!-- BARRE LATÉRALE : INFOS & ACTIONS -->
+    <aside>
+      <div class="glass-panel" style="padding:1.75rem; margin-bottom:1.5rem;">
+        <h3 style="font-size:.9rem; text-transform:uppercase; color:var(--clr-text-dim); margin-bottom:1rem;">Bio / Description</h3>
+        <p style="font-size:.9rem; line-height:1.6; color:var(--clr-text-muted); font-style:italic;">
+           <?= !empty($profileUser['bio']) ? htmlspecialchars($profileUser['bio']) : "Cet utilisateur n'a pas encore rédigé sa bio. 🍃" ?>
+        </p>
+
+        <?php if (isset($_SESSION['user_id']) && (int)$profileUser['id'] === (int)$_SESSION['user_id']): ?>
+          <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--clr-border);">
+            <p style="font-size:.8rem; color:var(--clr-text-dim); text-transform:uppercase; margin-bottom:1rem;">Ma gestion</p>
+            <div class="flex flex-col gap-1">
+              <a href="index.php?page=edit-profile" class="btn btn-ghost btn-sm text-center">✏️ Modifier mon profil</a>
+              <a href="index.php?page=logout" class="btn btn-danger btn-sm text-center">🚪 Me déconnecter</a>
+            </div>
+          </div>
+        <?php endif; ?>
+      </div>
+    </aside>
+
+    <!-- PARTIE PRINCIPALE : LES LISTES -->
+    <div>
+      
+      <!-- SES DÉFIS -->
+      <section style="margin-bottom:3rem;">
+        <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">🏗️ Défis lancés par <?= htmlspecialchars($profileUser['username']) ?></h2>
+        
+        <?php if (empty($challenges)): ?>
+          <p class="text-muted" style="font-style:italic;">Aucun défi lancé pour le moment.</p>
+        <?php else: ?>
+          <div class="grid grid-2 gap-md">
+            <?php foreach ($challenges as $ch): ?>
+              <article class="card">
+                <div class="card__body">
+                   <span class="card__category"><?= htmlspecialchars($ch['category']) ?></span>
+                   <h4 class="card__title">
+                      <a href="index.php?page=challenge-show&id=<?= $ch['id'] ?>"><?= htmlspecialchars($ch['title']) ?></a>
+                   </h4>
+                   <p class="card__desc" style="font-size:.85rem; line-height:1.4; color:var(--clr-text-dim);">
+                      <?= (int)$ch['submissions_count'] ?> participation(s) reçue(s)
+                   </p>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
+
+      <!-- SES PARTICIPATIONS -->
+      <section>
+        <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">🎉 Participations aux défis</h2>
+        
+        <?php if (empty($submissions)): ?>
+          <p class="text-muted" style="font-style:italic;">Aucune participation pour l'instant.</p>
+        <?php else: ?>
+          <div class="grid grid-2 gap-md">
+            <?php foreach ($submissions as $sub): ?>
+              <article class="card">
+                <div class="card__body">
+                   <h4 class="card__title">
+                      <a href="index.php?page=submission-show&id=<?= $sub['id'] ?>">Participation au défi : <?= htmlspecialchars($sub['challenge_title']) ?></a>
+                   </h4>
+                   <p class="card__desc" style="font-size:.85rem; color:var(--clr-text-dim);">
+                      🏆 <?= (int)$sub['vote_count'] ?> votes récoltés
+                   </p>
+                </div>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
+
+    </div>
+
+  </div>
+</div>

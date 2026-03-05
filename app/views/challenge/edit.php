@@ -1,66 +1,63 @@
-<?php $categories = ['Art & Design', 'Photographie', 'Écriture', 'Musique', 'Programmation', 'Vidéo', 'Jeux', 'Autre']; ?>
+<!-- ═══════════════════════════════════════════════════
+     MODIFIER UN DÉFI — ChallengeHub
+     ═══════════════════════════════════════════════════ -->
 
 <div class="page-header">
   <div class="page-header__inner">
-    <h1>✏️ Modifier le défi</h1>
-    <p>Mettez à jour les informations de votre défi</p>
+    <h1>✏️ Modifier le défi : <?= htmlspecialchars($challenge['title']) ?></h1>
+    <p>Mettez à jour les informations de votre challenge</p>
   </div>
 </div>
 
 <div class="container section">
-  <div class="container-md" style="margin:0 auto;">
+  <div class="auth-card" style="max-width:700px; margin:0 auto; padding:2rem;">
+    
+    <form action="index.php?page=challenge-edit" method="POST" enctype="multipart/form-data">
+        <!-- Sécurité CSRF -->
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+        <input type="hidden" name="id" value="<?= $challenge['id'] ?>">
 
-    <form method="POST" action="<?= BASE_URL ?>/index.php?page=challenge-edit" enctype="multipart/form-data" id="edit-challenge-form" novalidate>
-      <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= htmlspecialchars($csrf) ?>">
-      <input type="hidden" name="id" value="<?= $challenge['id'] ?>">
-
-      <div class="glass-panel" style="padding:2rem; display:flex; flex-direction:column; gap:1.5rem;">
-
+        <!-- Titre du défi -->
         <div class="form-group">
-          <label class="form-label" for="ch-title">Titre du défi *</label>
-          <input type="text" id="ch-title" name="title" class="form-control" value="<?= htmlspecialchars($challenge['title']) ?>" required minlength="5" maxlength="150">
+            <label class="form-label" for="title">Titre du défi</label>
+            <input type="text" id="title" name="title" class="form-control" 
+                   value="<?= htmlspecialchars($challenge['title']) ?>" required>
         </div>
 
+        <!-- Catégorie -->
         <div class="form-group">
-          <label class="form-label" for="ch-description">Description *</label>
-          <textarea id="ch-description" name="description" class="form-control" rows="6" required minlength="20"><?= htmlspecialchars($challenge['description']) ?></textarea>
+            <label class="form-label" for="category">Catégorie</label>
+            <input type="text" id="category" name="category" class="form-control" 
+                   value="<?= htmlspecialchars($challenge['category']) ?>" required>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="ch-category">Catégorie *</label>
-            <select id="ch-category" name="category" class="form-control" required>
-              <?php foreach ($categories as $cat): ?>
-                <option value="<?= htmlspecialchars($cat) ?>" <?= $challenge['category'] === $cat ? 'selected' : '' ?>>
-                  <?= htmlspecialchars($cat) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ch-deadline">Date limite *</label>
-            <input type="date" id="ch-deadline" name="deadline" class="form-control" value="<?= htmlspecialchars(substr($challenge['deadline'], 0, 10)) ?>" required>
-          </div>
-        </div>
-
+        <!-- Description du défi -->
         <div class="form-group">
-          <label class="form-label">Nouvelle image (optionnel — laissez vide pour garder l'actuelle)</label>
-          <?php if (!empty($challenge['image'])): ?>
-            <img src="<?= UPLOAD_URL . htmlspecialchars($challenge['image']) ?>" alt="Image actuelle" style="max-height:150px; border-radius:var(--radius-md); margin-bottom:.75rem;">
-          <?php endif; ?>
-          <input type="file" name="image" id="ch-image" class="form-control" accept="image/*">
+            <label class="form-label" for="description">Description détaillée</label>
+            <textarea id="description" name="description" class="form-control" rows="6" required><?= htmlspecialchars($challenge['description']) ?></textarea>
         </div>
 
-        <div class="flex gap-2" style="justify-content:flex-end;">
-          <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $challenge['id'] ?>" class="btn btn-ghost">Annuler</a>
-          <button type="submit" class="btn btn-primary" id="btn-edit-submit">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-            Enregistrer les modifications
-          </button>
+        <!-- Date limite -->
+        <div class="form-group">
+            <label class="form-label" for="deadline">Date limite actuelle : <?= date('d/m/Y', strtotime($challenge['deadline'])) ?></label>
+            <input type="date" id="deadline" name="deadline" class="form-control" 
+                   value="<?= date('Y-m-d', strtotime($challenge['deadline'])) ?>" required>
         </div>
 
-      </div>
+        <!-- Image illustrative -->
+        <div class="form-group">
+            <label class="form-label" for="image">Image du défi (Laissez vide pour garder l'actuelle)</label>
+            <?php if (!empty($challenge['image'])): ?>
+                <p style="font-size:.8rem; color:var(--clr-text-dim); margin-bottom:.5rem;">Image actuelle : <?= htmlspecialchars($challenge['image']) ?></p>
+            <?php endif; ?>
+            <input type="file" id="image" name="image" class="form-control" style="font-size:.85rem; padding:.5rem;">
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="flex gap-1" style="margin-top:2.5rem; border-top:1px solid var(--clr-border); padding-top:2rem;">
+            <a href="index.php?page=challenge-show&id=<?= $challenge['id'] ?>" class="btn btn-ghost" style="flex:1; justify-content:center;">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-lg" style="flex:2; justify-content:center;">✅ Mettre à jour le défi</button>
+        </div>
     </form>
 
   </div>

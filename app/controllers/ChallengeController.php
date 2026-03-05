@@ -1,197 +1,229 @@
 <?php
 
-require_once __DIR__ . '/Controller.php';
 require_once ROOT_PATH . '/app/models/Challenge.php';
 
+/**
+ * Contrôleur Challenge - Gère les défis (Affichage, Création, Modification, Suppression)
+ */
 class ChallengeController extends Controller {
 
-    private Challenge $challengeModel;
+    private $challengeModel;
 
     public function __construct() {
+        // Initialisation du modèle pour les défis
         $this->challengeModel = new Challenge();
     }
 
-    // ── GET /challenges ───────────────────────────────────────
-    public function index(): void {
-        $keyword  = $this->get('keyword');
-        $category = $this->get('category');
-        $sort     = $this->get('sort', 'newest');
-        $page     = max(1, (int) $this->get('page', '1'));
+    /**
+     * Liste de tous les défis (avec filtres et recherche)
+     */
+    public function index() {
+        // Récupération des filtres depuis l'URL (?keyword=...&category=...)
+        $filters = [
+            'keyword'  => $this->sanitize($_GET['keyword'] ?? ''),
+            'category' => $this->sanitize($_GET['category'] ?? ''),
+            'sort'     => $this->sanitize($_GET['sort'] ?? 'newest')
+        ];
 
-        $filters     = compact('keyword', 'category', 'sort');
-        $challenges  = $this->challengeModel->getAll($filters, $page);
-        $total       = $this->challengeModel->countAll($filters);
-        $totalPages  = (int) ceil($total / PER_PAGE);
-        $categories  = $this->challengeModel->getCategories();
+        // Gestion de la pagination
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
 
-        $this->render('challenge.index', [
+        // Appel au modèle pour récupérer les données
+        $challenges = $this->challengeModel->getAll($filters, $page);
+        $total      = $this->challengeModel->countAll($filters);
+        
+        // Calcul du nombre total de pages (utilisant la constante PER_PAGE du config.php)
+        $totalPages = ceil($total / PER_PAGE);
+        
+        // Récupération de la liste des catégories pour le menu déroulant
+        $categories = $this->challengeModel->getCategories();
+
+        $this->render('challenge/index', [
             'pageTitle'  => 'Tous les défis',
             'challenges' => $challenges,
             'categories' => $categories,
             'filters'    => $filters,
             'page'       => $page,
-            'totalPages' => $totalPages,
-            'total'      => $total,
+            'totalPages' => $totalPages
         ]);
     }
 
-    // ── GET /challenges/show?id=X ─────────────────────────────
-    public function show(): void {
-        $id        = (int) ($_GET['id'] ?? 0);
+    /**
+     * Affiche les détails d'un défi spécifique
+     */
+    public function show() {
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        
+        // On récupère le défi
         $challenge = $this->challengeModel->findById('challenges', $id);
 
         if (!$challenge) {
             $this->setFlash('error', 'Défi introuvable.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+            $this->redirect('index.php?page=challenges');
         }
 
+        // On charge les modèles nécessaires pour les participations et les votes
         require_once ROOT_PATH . '/app/models/Submission.php';
         require_once ROOT_PATH . '/app/models/Vote.php';
 
         $submissionModel = new Submission();
         $voteModel       = new Vote();
 
-        $sort        = $this->get('sort', 'newest');
+        $sort = $_GET['sort'] ?? 'newest';
         $submissions = $submissionModel->getByChallenge($id, $sort);
-        $userVotes   = [];
-
+        
+        // On vérifie si l'utilisateur a déjà voté pour chaque participation
+        $userVotes = [];
         if ($this->isLoggedIn()) {
             foreach ($submissions as $sub) {
                 $userVotes[$sub['id']] = $voteModel->hasVoted($this->currentUserId(), $sub['id']);
             }
         }
 
-        $alreadySubmitted = $this->isLoggedIn()
-            ? $submissionModel->existsByUserAndChallenge($this->currentUserId(), $id)
-            : false;
+        // On vérifie si l'utilisateur a déjà participé à ce défi
+        $alreadySubmitted = false;
+        if ($this->isLoggedIn()) {
+            $alreadySubmitted = $submissionModel->existsByUserAndChallenge($this->currentUserId(), $id);
+        }
 
-        $this->render('challenge.show', [
-            'pageTitle'        => htmlspecialchars($challenge['title']),
+        $this->render('challenge/show', [
+            'pageTitle'        => $challenge['title'],
             'challenge'        => $challenge,
             'submissions'      => $submissions,
             'userVotes'        => $userVotes,
             'alreadySubmitted' => $alreadySubmitted,
             'sort'             => $sort,
-            'csrf'             => $this->generateCsrfToken(),
+            'csrf'             => $this->generateCsrfToken() // Pour le vote
         ]);
     }
 
-    // ── GET /challenges/create ────────────────────────────────
-    public function showCreate(): void {
+    /**
+     * Affiche le formulaire de création
+     */
+    public function showCreate() {
         $this->requireLogin();
-        $csrf = $this->generateCsrfToken();
-        $this->render('challenge.create', ['pageTitle' => 'Créer un défi', 'csrf' => $csrf]);
+        $this->render('challenge/create', [
+            'pageTitle' => 'Créer un défi',
+            'csrf'      => $this->generateCsrfToken()
+        ]);
     }
 
-    // ── POST /challenges/create ───────────────────────────────
-    public function create(): void {
+    /**
+     * Traite la création d'un défi (POST)
+     */
+    public function create() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $title       = $this->post('title');
-        $description = $this->post('description');
-        $category    = $this->post('category');
-        $deadline    = $this->post('deadline');
+        // Récupération des données
+        $data = [
+            'user_id'     => $this->currentUserId(),
+            'title'       => $this->sanitize($_POST['title'] ?? ''),
+            'description' => $this->sanitize($_POST['description'] ?? ''),
+            'category'    => $this->sanitize($_POST['category'] ?? ''),
+            'deadline'    => $this->sanitize($_POST['deadline'] ?? '')
+        ];
 
-        $errors = [];
-        if (strlen($title) < 5)       $errors[] = 'Le titre doit comporter au moins 5 caractères.';
-        if (strlen($description) < 20) $errors[] = 'La description doit comporter au moins 20 caractères.';
-        if (empty($category))          $errors[] = 'Veuillez choisir une catégorie.';
-        if (empty($deadline))          $errors[] = 'Veuillez définir une date limite.';
-
-        if (!empty($errors)) {
-            $_SESSION['form_errors'] = $errors;
-            $this->redirect(BASE_URL . '/index.php?page=challenge-create');
-            return;
+        // Validation simple
+        if (empty($data['title']) || empty($data['description'])) {
+            $this->setFlash('error', 'Veuillez remplir tous les champs obligatoires.');
+            $this->redirect('index.php?page=challenge-create');
         }
 
-        $image = $this->handleUpload('image', 'challenges');
+        // Gestion de l'image
+        $data['image'] = $this->handleUpload('image');
 
-        $id = $this->challengeModel->create([
-            'user_id'     => $this->currentUserId(),
-            'title'       => $title,
-            'description' => $description,
-            'category'    => $category,
-            'deadline'    => $deadline,
-            'image'       => $image,
-        ]);
+        // Enregistrement en BDD
+        $newId = $this->challengeModel->create($data);
 
-        if ($id) {
-            $this->setFlash('success', 'Défi créé avec succès !');
-            $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $id);
+        if ($newId) {
+            $this->setFlash('success', 'Votre défi a été publié !');
+            $this->redirect('index.php?page=challenge-show&id=' . $newId);
         } else {
-            $this->setFlash('error', 'Erreur lors de la création du défi.');
-            $this->redirect(BASE_URL . '/index.php?page=challenge-create');
+            $this->setFlash('error', 'Erreur lors de la création.');
+            $this->redirect('index.php?page=challenge-create');
         }
     }
 
-    // ── GET /challenges/edit?id=X ─────────────────────────────
-    public function showEdit(): void {
+    /**
+     * Affiche le formulaire de modification
+     */
+    public function showEdit() {
         $this->requireLogin();
-        $id        = (int) ($_GET['id'] ?? 0);
+        $id = (int)($_GET['id'] ?? 0);
         $challenge = $this->challengeModel->findById('challenges', $id);
 
+        // Vérification du propriétaire
         if (!$challenge || (int)$challenge['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+            $this->setFlash('error', 'Action non autorisée.');
+            $this->redirect('index.php?page=challenges');
         }
 
-        $csrf = $this->generateCsrfToken();
-        $this->render('challenge.edit', [
+        $this->render('challenge/edit', [
             'pageTitle' => 'Modifier le défi',
             'challenge' => $challenge,
-            'csrf'      => $csrf,
+            'csrf'      => $this->generateCsrfToken()
         ]);
     }
 
-    // ── POST /challenges/edit ─────────────────────────────────
-    public function update(): void {
+    /**
+     * Traite la modification (POST)
+     */
+    public function update() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
-        $id        = (int) ($_POST['id'] ?? 0);
+        $id = (int)($_POST['id'] ?? 0);
         $challenge = $this->challengeModel->findById('challenges', $id);
 
         if (!$challenge || (int)$challenge['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+            $this->setFlash('error', 'Action non autorisée.');
+            $this->redirect('index.php?page=challenges');
         }
 
         $data = [
-            'title'       => $this->post('title'),
-            'description' => $this->post('description'),
-            'category'    => $this->post('category'),
-            'deadline'    => $this->post('deadline'),
+            'title'       => $this->sanitize($_POST['title'] ?? ''),
+            'description' => $this->sanitize($_POST['description'] ?? ''),
+            'category'    => $this->sanitize($_POST['category'] ?? ''),
+            'deadline'    => $this->sanitize($_POST['deadline'] ?? '')
         ];
 
-        $image = $this->handleUpload('image', 'challenges');
-        if ($image) $data['image'] = $image;
-
-        $this->challengeModel->update($id, $data);
-
-        $this->setFlash('success', 'Défi modifié avec succès !');
-        $this->redirect(BASE_URL . '/index.php?page=challenge-show&id=' . $id);
-    }
-
-    // ── POST /challenges/delete ───────────────────────────────
-    public function delete(): void {
-        $this->requireLogin();
-        $this->verifyCsrfToken();
-
-        $id        = (int) ($_POST['id'] ?? 0);
-        $challenge = $this->challengeModel->findById('challenges', $id);
-
-        if (!$challenge || (int)$challenge['user_id'] !== $this->currentUserId()) {
-            $this->setFlash('error', 'Accès refusé.');
-            $this->redirect(BASE_URL . '/index.php?page=challenges');
-            return;
+        // On ne change l'image que si une nouvelle est envoyée
+        $newImage = $this->handleUpload('image');
+        if ($newImage) {
+            $data['image'] = $newImage;
         }
 
-        $this->challengeModel->delete($id);
-        $this->setFlash('success', 'Défi supprimé.');
-        $this->redirect(BASE_URL . '/index.php?page=challenges');
+        if ($this->challengeModel->update($id, $data)) {
+            $this->setFlash('success', 'Défi mis à jour.');
+            $this->redirect('index.php?page=challenge-show&id=' . $id);
+        } else {
+            $this->setFlash('error', 'Aucun changement effectué.');
+            $this->redirect('index.php?page=challenge-show&id=' . $id);
+        }
+    }
+
+    /**
+     * Supprime un défi
+     */
+    public function delete() {
+        $this->requireLogin();
+        
+        // Pour la suppression, on utilise généralement POST pour plus de sécurité
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->verifyCsrfToken();
+            $id = (int)($_POST['id'] ?? 0);
+            
+            $challenge = $this->challengeModel->findById('challenges', $id);
+            if ($challenge && (int)$challenge['user_id'] === $this->currentUserId()) {
+                $this->challengeModel->delete($id);
+                $this->setFlash('success', 'Défi supprimé avec succès.');
+            } else {
+                $this->setFlash('error', 'Action impossible.');
+            }
+        }
+        
+        $this->redirect('index.php?page=challenges');
     }
 }

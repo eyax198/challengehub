@@ -2,101 +2,109 @@
 
 require_once __DIR__ . '/Model.php';
 
+/**
+ * Modèle Submission - Gère les données des participations (projets soumis)
+ */
 class Submission extends Model {
 
-    // ── Create ────────────────────────────────────────────────
-    public function create(array $data): int|false {
-        $this->query(
-            "INSERT INTO submissions (challenge_id, user_id, description, image, link, created_at)
-             VALUES (?, ?, ?, ?, ?, NOW())",
-            [
-                $data['challenge_id'],
-                $data['user_id'],
-                $data['description'],
-                $data['image'] ?? null,
-                $data['link']  ?? null,
-            ]
-        );
-        return (int) $this->lastInsertId();
+    /**
+     * Crée une nouvelle participation
+     */
+    public function create($data) {
+        $sql = "INSERT INTO submissions (challenge_id, user_id, description, image, link, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())";
+        
+        $params = [
+            $data['challenge_id'],
+            $data['user_id'],
+            $data['description'],
+            $data['image'] ?? null,
+            $data['link']  ?? null,
+        ];
+
+        $this->query($sql, $params);
+        return $this->lastInsertId();
     }
 
-    // ── Read ─────────────────────────────────────────────────
-    public function findById(string $table = 'submissions', int $id = 0): array|false {
-        return $this->query(
-            "SELECT s.*, u.username, u.avatar,
-                    c.title AS challenge_title,
-                    COALESCE(SUM(v.value), 0) AS vote_count
-             FROM submissions s
-             JOIN users u ON s.user_id = u.id
-             JOIN challenges c ON s.challenge_id = c.id
-             LEFT JOIN votes v ON v.submission_id = s.id
-             WHERE s.id = ?
-             GROUP BY s.id",
-            [$id]
-        )->fetch();
+    /**
+     * Récupère une participation par son ID (avec auteur et titre du défi)
+     */
+    public function findById($id) {
+        $sql = "SELECT s.*, u.username, u.avatar,
+                       c.title AS challenge_title,
+                       (SELECT COUNT(*) FROM votes WHERE submission_id = s.id) AS vote_count
+                FROM submissions s
+                JOIN users u ON s.user_id = u.id
+                JOIN challenges c ON s.challenge_id = c.id
+                WHERE s.id = ?";
+        
+        return $this->query($sql, [$id])->fetch();
     }
 
-    public function getByChallenge(int $challengeId, string $sort = 'newest'): array {
-        $orderBy = match($sort) {
-            'top'    => 'vote_count DESC',
-            'oldest' => 's.created_at ASC',
-            default  => 's.created_at DESC',
-        };
+    /**
+     * Récupère toutes les participations d'un défi spécifique
+     */
+    public function getByChallenge($challengeId, $sort = 'newest') {
+        // Définition du tri
+        $orderBy = "s.created_at DESC";
+        if ($sort === 'top')    $orderBy = "vote_count DESC";
+        if ($sort === 'oldest') $orderBy = "s.created_at ASC";
 
-        return $this->query(
-            "SELECT s.*, u.username, u.avatar,
-                    COALESCE(SUM(v.value), 0) AS vote_count,
-                    COUNT(DISTINCT cm.id) AS comment_count
-             FROM submissions s
-             JOIN users u ON s.user_id = u.id
-             LEFT JOIN votes v ON v.submission_id = s.id
-             LEFT JOIN comments cm ON cm.submission_id = s.id
-             WHERE s.challenge_id = ?
-             GROUP BY s.id
-             ORDER BY {$orderBy}",
-            [$challengeId]
-        )->fetchAll();
+        // Requête avec compteurs de votes et commentaires
+        $sql = "SELECT s.*, u.username, u.avatar,
+                       (SELECT COUNT(*) FROM votes WHERE submission_id = s.id) AS vote_count,
+                       (SELECT COUNT(*) FROM comments WHERE submission_id = s.id) AS comment_count
+                FROM submissions s
+                JOIN users u ON s.user_id = u.id
+                WHERE s.challenge_id = ?
+                ORDER BY $orderBy";
+
+        return $this->query($sql, [$challengeId])->fetchAll();
     }
 
-    public function getByUser(int $userId): array {
-        return $this->query(
-            "SELECT s.*, c.title AS challenge_title,
-                    COALESCE(SUM(v.value), 0) AS vote_count
-             FROM submissions s
-             JOIN challenges c ON s.challenge_id = c.id
-             LEFT JOIN votes v ON v.submission_id = s.id
-             WHERE s.user_id = ?
-             GROUP BY s.id
-             ORDER BY s.created_at DESC",
-            [$userId]
-        )->fetchAll();
+    /**
+     * Récupère les participations d'un utilisateur spécifique
+     */
+    public function getByUser($userId) {
+        $sql = "SELECT s.*, c.title AS challenge_title,
+                       (SELECT COUNT(*) FROM votes WHERE submission_id = s.id) AS vote_count
+                FROM submissions s
+                JOIN challenges c ON s.challenge_id = c.id
+                WHERE s.user_id = ?
+                ORDER BY s.created_at DESC";
+        
+        return $this->query($sql, [$userId])->fetchAll();
     }
 
-    public function getTopSubmissions(int $limit = 10): array {
-        return $this->query(
-            "SELECT s.*, u.username, u.avatar,
-                    c.title AS challenge_title,
-                    COALESCE(SUM(v.value), 0) AS vote_count
-             FROM submissions s
-             JOIN users u ON s.user_id = u.id
-             JOIN challenges c ON s.challenge_id = c.id
-             LEFT JOIN votes v ON v.submission_id = s.id
-             GROUP BY s.id
-             ORDER BY vote_count DESC
-             LIMIT ?",
-            [$limit]
-        )->fetchAll();
+    /**
+     * Classement des meilleures participations (Basé sur le nombre de votes)
+     */
+    public function getTopSubmissions($limit = 10) {
+        $sql = "SELECT s.*, u.username, u.avatar,
+                       c.title AS challenge_title,
+                       (SELECT COUNT(*) FROM votes WHERE submission_id = s.id) AS vote_count
+                FROM submissions s
+                JOIN users u ON s.user_id = u.id
+                JOIN challenges c ON s.challenge_id = c.id
+                ORDER BY vote_count DESC
+                LIMIT $limit";
+        
+        return $this->query($sql)->fetchAll();
     }
 
-    public function existsByUserAndChallenge(int $userId, int $challengeId): bool {
-        return (bool) $this->query(
-            "SELECT COUNT(*) FROM submissions WHERE user_id = ? AND challenge_id = ?",
-            [$userId, $challengeId]
-        )->fetchColumn();
+    /**
+     * Vérifie si un utilisateur a déjà participé à un défi
+     */
+    public function existsByUserAndChallenge($userId, $challengeId) {
+        $sql = "SELECT COUNT(*) FROM submissions WHERE user_id = ? AND challenge_id = ?";
+        $count = $this->query($sql, [$userId, $challengeId])->fetchColumn();
+        return (int)$count > 0;
     }
 
-    // ── Update ────────────────────────────────────────────────
-    public function update(int $id, array $data): bool {
+    /**
+     * Met à jour une participation
+     */
+    public function update($id, $data) {
         $fields = [];
         $params = [];
 
@@ -107,14 +115,14 @@ class Submission extends Model {
         if (empty($fields)) return false;
 
         $params[] = $id;
-        return $this->query(
-            "UPDATE submissions SET " . implode(', ', $fields) . " WHERE id = ?",
-            $params
-        )->rowCount() > 0;
+        $sql = "UPDATE submissions SET " . implode(', ', $fields) . " WHERE id = ?";
+        return $this->query($sql, $params)->rowCount() > 0;
     }
 
-    // ── Delete ────────────────────────────────────────────────
-    public function delete(int $id): bool {
+    /**
+     * Supprime une participation
+     */
+    public function delete($id) {
         return $this->deleteById('submissions', $id);
     }
 }

@@ -3,7 +3,7 @@
 // ─── App Settings ────────────────────────────────────────────
 define('APP_NAME',    'ChallengeHub_db');
 define('APP_VERSION', '1.0.0');
-define('BASE_URL',    'http://localhost:8000');
+define('BASE_URL', 'http://localhost:8000');
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', dirname(__DIR__));
 }

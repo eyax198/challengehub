@@ -1,147 +1,112 @@
-<?php
-// Helper to compute deadline status
-function deadlineStatus(string $deadline): string {
-    $diff = (new DateTime($deadline))->getTimestamp() - time();
-    if ($diff < 0) return 'expired';
-    if ($diff < 3 * 86400) return 'soon';
-    return 'ok';
-}
-function deadlineLabel(string $deadline): string {
-    $diff = (new DateTime($deadline))->getTimestamp() - time();
-    if ($diff < 0) return 'Expiré';
-    $days = (int)($diff / 86400);
-    if ($days === 0) return 'Expire aujourd\'hui';
-    if ($days === 1) return 'Expire demain';
-    return "J-{$days}";
-}
-?>
+<!-- ═══════════════════════════════════════════════════
+     LISTE DES DÉFIS — ChallengeHub
+     ═══════════════════════════════════════════════════ -->
 
 <div class="page-header">
   <div class="page-header__inner">
-    <h1>⚡ Tous les défis</h1>
-    <p>Découvrez et participez aux défis publiés par la communauté • <strong><?= $total ?></strong> défi<?= $total > 1 ? 's' : '' ?></p>
+    <h1>Tous les défis créatifs</h1>
+    <p>Explorez les défis de la communauté et participez !</p>
   </div>
 </div>
 
 <div class="container section">
+  <div style="display:grid; grid-template-columns:280px 1fr; gap:2rem; align-items:start;">
 
-  <!-- Filters -->
-  <form class="filters" method="GET" action="<?= BASE_URL ?>/index.php" id="filters-form">
-    <input type="hidden" name="page" value="challenges">
+    <!-- BARRE LATÉRALE : FILTRES -->
+    <aside class="glass-panel" style="padding:1.5rem; position:sticky; top:2rem;">
+      <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1.5rem;">🔍 Filtres</h3>
 
-    <div class="filters__search">
-      <svg class="filters__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input
-        type="text"
-        name="keyword"
-        id="filter-keyword"
-        class="form-control"
-        placeholder="Rechercher un défi..."
-        value="<?= htmlspecialchars($filters['keyword'] ?? '') ?>"
-        style="padding-left:2.75rem"
-      >
-    </div>
+      <form action="index.php" method="GET" class="flex flex-col gap-1">
+        <input type="hidden" name="page" value="challenges">
 
-    <select name="category" id="filter-category" class="form-control" style="min-width:160px;">
-      <option value="">Toutes les catégories</option>
-      <?php foreach ($categories as $cat): ?>
-        <option value="<?= htmlspecialchars($cat) ?>" <?= ($filters['category'] ?? '') === $cat ? 'selected' : '' ?>>
-          <?= htmlspecialchars($cat) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
-
-    <select name="sort" id="filter-sort" class="form-control" style="min-width:140px;">
-      <option value="newest" <?= ($filters['sort'] ?? '') === 'newest'  ? 'selected' : '' ?>>Plus récents</option>
-      <option value="popular" <?= ($filters['sort'] ?? '') === 'popular' ? 'selected' : '' ?>>Plus populaires</option>
-      <option value="oldest"  <?= ($filters['sort'] ?? '') === 'oldest'  ? 'selected' : '' ?>>Plus anciens</option>
-    </select>
-
-    <button type="submit" class="btn btn-primary" id="filter-submit">Filtrer</button>
-    <a href="<?= BASE_URL ?>/index.php?page=challenges" class="btn btn-ghost" id="filter-reset">Réinitialiser</a>
-  </form>
-
-  <!-- Challenge Grid -->
-  <?php if (empty($challenges)): ?>
-    <div class="empty-state" id="challenges-empty">
-      <div class="empty-state__icon">🔍</div>
-      <h3>Aucun défi trouvé</h3>
-      <p>Essayez d'autres filtres ou <a href="<?= BASE_URL ?>/index.php?page=challenge-create" style="color:var(--clr-primary-l)">créez le premier défi !</a></p>
-    </div>
-  <?php else: ?>
-    <div class="grid grid-auto gap-md" id="challenges-grid">
-      <?php foreach ($challenges as $ch): ?>
-        <?php
-        $status = deadlineStatus($ch['deadline']);
-        $dlLabel = deadlineLabel($ch['deadline']);
-        ?>
-      <article class="card fade-in" id="challenge-<?= $ch['id'] ?>">
-
-        <?php if (!empty($ch['image'])): ?>
-          <img src="<?= UPLOAD_URL . htmlspecialchars($ch['image']) ?>" alt="<?= htmlspecialchars($ch['title']) ?>" class="card__media">
-        <?php else: ?>
-          <div class="card__media-placeholder">⚡</div>
-        <?php endif; ?>
-
-        <div class="card__body">
-          <span class="card__category"><?= htmlspecialchars($ch['category']) ?></span>
-          <h2 class="card__title">
-            <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $ch['id'] ?>" style="color:inherit">
-              <?= htmlspecialchars($ch['title']) ?>
-            </a>
-          </h2>
-          <p class="card__desc"><?= htmlspecialchars($ch['description']) ?></p>
-
-          <div class="flex gap-1 flex-wrap" style="margin-top:.75rem">
-            <span class="badge badge-primary">
-              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-              <?= htmlspecialchars($dlLabel) ?>
-            </span>
-            <span class="badge badge-<?= $ch['submissions_count'] > 0 ? 'success' : 'warning' ?>">
-              <?= (int)$ch['submissions_count'] ?> participation<?= $ch['submissions_count'] > 1 ? 's' : '' ?>
-            </span>
-          </div>
+        <!-- Recherche par mot-clé -->
+        <div class="form-group">
+          <label class="form-label" for="keyword">Mots-clés</label>
+          <input type="text" id="keyword" name="keyword" class="form-control form-control--sm" 
+                 placeholder="Rechercher..." value="<?= htmlspecialchars($filters['keyword'] ?? '') ?>">
         </div>
 
-        <div class="card__footer">
-          <div class="card__meta">
-            <?php if (!empty($ch['avatar'])): ?>
-              <img src="<?= UPLOAD_URL . htmlspecialchars($ch['avatar']) ?>" alt="" class="avatar-sm">
+        <!-- Catégories -->
+        <div class="form-group">
+          <label class="form-label" for="category">Catégorie</label>
+          <select id="category" name="category" class="form-control form-control--sm">
+            <option value="">Toutes les catégories</option>
+            <?php foreach ($categories as $cat): ?>
+              <option value="<?= htmlspecialchars($cat) ?>" <?= ($filters['category'] ?? '') === $cat ? 'selected' : '' ?>>
+                <?= htmlspecialchars($cat) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <!-- Tri -->
+        <div class="form-group">
+          <label class="form-label" for="sort">Trier par</label>
+          <select id="sort" name="sort" class="form-control form-control--sm">
+            <option value="newest" <?= ($filters['sort'] ?? 'newest') === 'newest' ? 'selected' : '' ?>>Plus récents</option>
+            <option value="popular" <?= ($filters['sort'] ?? '') === 'popular' ? 'selected' : '' ?>>Plus populaires</option>
+            <option value="oldest" <?= ($filters['sort'] ?? '') === 'oldest' ? 'selected' : '' ?>>Plus anciens</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-sm" style="margin-top:1rem; width:100%; justify-content:center;">Appliquer</button>
+        <a href="index.php?page=challenges" class="btn btn-ghost btn-xs text-center">Réinitialiser</a>
+      </form>
+    </aside>
+
+    <!-- LISTE DES DÉFIS (RÉSULTATS) -->
+    <div>
+      <div class="flex justify-between items-center mb-2">
+        <p class="text-dim"><?= count($challenges) ?> défis trouvés</p>
+      </div>
+
+      <?php if (empty($challenges)): ?>
+        <div class="card" style="text-align:center; padding:4rem;">
+          <div style="font-size:3.5rem;">🔎</div>
+          <h2 style="font-size:1.3rem; margin-top:1rem;">Aucun défi ne correspond à votre recherche.</h2>
+          <a href="index.php?page=challenges" class="btn btn-primary" style="margin-top:1.5rem;">Voir tous les défis</a>
+        </div>
+      <?php else: ?>
+        <div class="grid grid-2 gap-md">
+          <?php foreach ($challenges as $ch): ?>
+          <article class="card fade-in">
+            <?php if (!empty($ch['image'])): ?>
+              <img src="public/images/uploads/<?= htmlspecialchars($ch['image']) ?>" alt="Challenge" class="card__media">
             <?php else: ?>
-              <div class="avatar-placeholder sm"><?= strtoupper(substr($ch['username'], 0, 1)) ?></div>
+              <div class="card__media-placeholder">⚡</div>
             <?php endif; ?>
-            <a href="<?= BASE_URL ?>/index.php?page=profile&id=<?= $ch['user_id'] ?>" style="color:inherit">
-              <?= htmlspecialchars($ch['username']) ?>
-            </a>
-          </div>
-          <a href="<?= BASE_URL ?>/index.php?page=challenge-show&id=<?= $ch['id'] ?>" class="btn btn-primary btn-sm">
-            Voir →
-          </a>
+
+            <div class="card__body">
+              <span class="card__category"><?= htmlspecialchars($ch['category']) ?></span>
+              <h3 class="card__title">
+                <a href="index.php?page=challenge-show&id=<?= $ch['id'] ?>"><?= htmlspecialchars($ch['title']) ?></a>
+              </h3>
+              <p class="card__desc"><?= htmlspecialchars($ch['description']) ?></p>
+            </div>
+
+            <div class="card__footer">
+              <div class="card__meta">
+                👤 <span><?= htmlspecialchars($ch['username']) ?></span>
+              </div>
+              <a href="index.php?page=challenge-show&id=<?= $ch['id'] ?>" class="btn btn-primary btn-sm">Voir →</a>
+            </div>
+          </article>
+          <?php endforeach; ?>
         </div>
-      </article>
-      <?php endforeach; ?>
+
+        <!-- PAGINATION (Simplifiée) -->
+        <?php if ($totalPages > 1): ?>
+        <div class="flex justify-center gap-1" style="margin-top:3rem;">
+          <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+            <a href="index.php?page=challenges&page=<?= $i ?>&keyword=<?= urlencode($filters['keyword'] ?? '') ?>&category=<?= urlencode($filters['category'] ?? '') ?>&sort=<?= $filters['sort'] ?? 'newest' ?>" 
+               class="btn <?= $page === $i ? 'btn-primary' : 'btn-ghost' ?> btn-xs">
+               <?= $i ?>
+            </a>
+          <?php endfor; ?>
+        </div>
+        <?php endif; ?>
+      <?php endif; ?>
     </div>
 
-    <!-- Pagination -->
-    <?php if ($totalPages > 1): ?>
-    <nav class="pagination" aria-label="Pagination">
-      <?php if ($page > 1): ?>
-        <a href="?page=challenges&keyword=<?= urlencode($filters['keyword'] ?? '') ?>&category=<?= urlencode($filters['category'] ?? '') ?>&sort=<?= $filters['sort'] ?>&page=<?= $page - 1 ?>" aria-label="Page précédente">‹</a>
-      <?php endif; ?>
-
-      <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-        <?php if ($i === $page): ?>
-          <span class="active" aria-current="page"><?= $i ?></span>
-        <?php else: ?>
-          <a href="?page=challenges&keyword=<?= urlencode($filters['keyword'] ?? '') ?>&category=<?= urlencode($filters['category'] ?? '') ?>&sort=<?= $filters['sort'] ?>&page=<?= $i ?>"><?= $i ?></a>
-        <?php endif; ?>
-      <?php endfor; ?>
-
-      <?php if ($page < $totalPages): ?>
-        <a href="?page=challenges&keyword=<?= urlencode($filters['keyword'] ?? '') ?>&category=<?= urlencode($filters['category'] ?? '') ?>&sort=<?= $filters['sort'] ?>&page=<?= $page + 1 ?>" aria-label="Page suivante">›</a>
-      <?php endif; ?>
-    </nav>
-    <?php endif; ?>
-  <?php endif; ?>
-
+  </div>
 </div>
