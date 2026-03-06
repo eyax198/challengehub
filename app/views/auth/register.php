@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     PAGE D'INSCRIPTION — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Formulaire d'inscription -->
 
 <div class="auth-wrapper">
   <div class="auth-card slide-up">
@@ -13,7 +11,7 @@
 
     <!-- Formulaire d'Inscription -->
     <form class="auth-card__form" method="POST" action="index.php?page=register" enctype="multipart/form-data">
-      <!-- Jeton CSRF (Sécurité contre les attaques Cross-Site Request Forgery) -->
+      <!-- Token CSRF pour la sécurité -->
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
       <!-- Nom d'utilisateur -->

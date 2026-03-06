@@ -2,14 +2,11 @@
 
 require_once __DIR__ . '/Model.php';
 
-/**
- * Modèle Submission - Gère les données des participations (projets soumis)
- */
+// MODÈLE SUBMISSION
+// Gestion des projets envoyés par les membres
 class Submission extends Model {
 
-    /**
-     * Crée une nouvelle participation
-     */
+    // On enregistre une nouvelle participation
     public function create($data) {
         $sql = "INSERT INTO submissions (challenge_id, user_id, description, image, link, created_at)
                 VALUES (?, ?, ?, ?, ?, NOW())";
@@ -26,9 +23,7 @@ class Submission extends Model {
         return $this->lastInsertId();
     }
 
-    /**
-     * Récupère une participation par son ID (avec auteur et titre du défi)
-     */
+    // On cherche un projet par son ID avec les infos de l'auteur et du défi
     public function findById($id) {
         $sql = "SELECT s.*, u.username, u.avatar,
                        c.title AS challenge_title,
@@ -41,9 +36,7 @@ class Submission extends Model {
         return $this->query($sql, [$id])->fetch();
     }
 
-    /**
-     * Récupère toutes les participations d'un défi spécifique
-     */
+    // Récupère les projets d'un défi (on peut trier par top votes)
     public function getByChallenge($challengeId, $sort = 'newest') {
         // Définition du tri
         $orderBy = "s.created_at DESC";
@@ -76,9 +69,7 @@ class Submission extends Model {
         return $this->query($sql, [$userId])->fetchAll();
     }
 
-    /**
-     * Classement des meilleures participations (Basé sur le nombre de votes)
-     */
+    // On fait le classement des meilleurs projets
     public function getTopSubmissions($limit = 10) {
         $sql = "SELECT s.*, u.username, u.avatar,
                        c.title AS challenge_title,

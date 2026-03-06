@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     DÉTAILS DU DÉFI — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Fiche détaillée d'un défi -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -34,16 +32,6 @@
         <div class="flex justify-between items-center mb-1.5">
           <h2 style="font-weight:700; font-size:1.3rem;">🚀 Participations (<?= count($submissions) ?>)</h2>
           
-          <!-- Filtre de tri des participations -->
-          <form action="index.php" method="GET" class="flex items-center gap-1">
-            <input type="hidden" name="page" value="challenge-show">
-            <input type="hidden" name="id" value="<?= $challenge['id'] ?>">
-            <span style="font-size:.8rem; color:var(--clr-text-dim);">Trier :</span>
-            <select name="sort" onchange="this.form.submit()" class="form-control form-control--xs">
-              <option value="newest" <?= ($sort ?? '') === 'newest' ? 'selected' : '' ?>>Plus récents</option>
-              <option value="top" <?= ($sort ?? '') === 'top' ? 'selected' : '' ?>>Meilleurs votes</option>
-              <option value="oldest" <?= ($sort ?? '') === 'oldest' ? 'selected' : '' ?>>Plus anciens</option>
-            </select>
           </form>
         </div>
 
@@ -107,7 +95,7 @@
               ⚡ Participer au défi
             </a>
 
-            <!-- FORMULAIRE DE PARTICIPATION (Simplifié) -->
+            <!-- Formulaire pour participer au challenge -->
             <div id="form-participation" style="display:none; margin-top:1rem;" class="fade-in">
                 <h4 style="margin-bottom:1rem; font-size:1.1rem;">Envoyer ma création</h4>
                 <form action="index.php?page=submission-create" method="POST" enctype="multipart/form-data">
@@ -137,7 +125,7 @@
             </div>
           <?php endif; ?>
 
-          <!-- OPTIONS POUR LE CRÉATEUR -->
+          <!-- Menu pour l'auteur du défi -->
           <?php if (isset($_SESSION['user_id']) && (int)$challenge['user_id'] === (int)$_SESSION['user_id']): ?>
             <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--clr-border);">
               <p style="font-size:.8rem; margin-bottom:1rem; text-transform:uppercase; color:var(--clr-text-dim);">Gestion du défi</p>

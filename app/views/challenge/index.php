@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     LISTE DES DÉFIS — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Affichage de tous les défis -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -12,7 +10,7 @@
 <div class="container section">
   <div style="display:grid; grid-template-columns:280px 1fr; gap:2rem; align-items:start;">
 
-    <!-- BARRE LATÉRALE : FILTRES -->
+    <!-- Les filtres à gauche -->
     <aside class="glass-panel" style="padding:1.5rem; position:sticky; top:2rem;">
       <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1.5rem;">🔍 Filtres</h3>
 
@@ -54,7 +52,7 @@
       </form>
     </aside>
 
-    <!-- LISTE DES DÉFIS (RÉSULTATS) -->
+    <!-- Ici on liste les résultats -->
     <div>
       <div class="flex justify-between items-center mb-2">
         <p class="text-dim"><?= count($challenges) ?> défis trouvés</p>
@@ -94,7 +92,7 @@
           <?php endforeach; ?>
         </div>
 
-        <!-- PAGINATION (Simplifiée) -->
+        <!-- Barre de pagination -->
         <?php if ($totalPages > 1): ?>
         <div class="flex justify-center gap-1" style="margin-top:3rem;">
           <?php for ($i = 1; $i <= $totalPages; $i++): ?>

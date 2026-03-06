@@ -4,9 +4,7 @@ require_once ROOT_PATH . '/app/models/Challenge.php';
 require_once ROOT_PATH . '/app/models/Submission.php';
 require_once ROOT_PATH . '/app/models/User.php';
 
-/**
- * Contrôleur Home - Gère l'affichage de la page d'accueil
- */
+// CONTRÔLEUR ACCUEIL
 class HomeController extends Controller {
 
     public function index() {
@@ -15,11 +13,11 @@ class HomeController extends Controller {
         $submissionModel = new Submission();
         $userModel       = new User();
 
-        // On récupère les données à afficher sur l'accueil
+        // On va chercher ce qu'on veut montrer sur l'accueil
         $recentChallenges = $challengeModel->getRecent(6); // 6 derniers défis
         $topSubmissions   = $submissionModel->getTopSubmissions(3); // Top 3 des projets
         
-        // On récupère tous les utilisateurs pour afficher une stat (ex: "Déjà 12 membres")
+        // On compte les membres pour faire une petite stat sympa
         $allUsers = $userModel->getAll();
 
         $this->render('home/index', [

@@ -2,14 +2,11 @@
 
 require_once __DIR__ . '/Model.php';
 
-/**
- * Modèle Comment - Gère les commentaires sur les projets
- */
+// MODÈLE COMMENT
+// Pour gérer les petits messages sous les projets
 class Comment extends Model {
 
-    /**
-     * Crée un nouveau commentaire
-     */
+    // On ajoute le comm en base
     public function create($data) {
         $sql = "INSERT INTO comments (submission_id, user_id, content, created_at)
                 VALUES (?, ?, ?, NOW())";
@@ -36,9 +33,7 @@ class Comment extends Model {
         return $this->query($sql, [$id])->fetch();
     }
 
-    /**
-     * Récupère tous les commentaires d'une participation spécifique
-     */
+    // On récupère tous les commentaires d'un projet précis
     public function getBySubmission($submissionId) {
         $sql = "SELECT cm.*, u.username, u.avatar
                 FROM comments cm

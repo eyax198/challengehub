@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     DÉTAILS DE LA PARTICIPATION — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Détails d'un projet soumis -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -56,7 +54,7 @@
           <?php endif; ?>
         </div>
 
-        <!-- Formulaire d'ajout de commentaire (Ajax) -->
+        <!-- Bloc pour ajouter un commentaire (en Ajax) -->
         <?php if (isset($_SESSION['user_id'])): ?>
           <div style="margin-top:2rem; padding-top:1.5rem; border-top:2px solid var(--clr-border);">
             <div class="form-group">
@@ -88,7 +86,7 @@
         </div>
 
         <div style="margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--clr-border);">
-          <!-- VOTE (Ajax) -->
+          <!-- Le bouton de vote (Ajax) -->
           <?php if (isset($_SESSION['user_id']) && (int)$submission['user_id'] !== (int)$_SESSION['user_id']): ?>
             <button class="btn <?= $hasVoted ? 'btn-primary' : 'btn-outline' ?>" 
                     id="vote-btn" 
@@ -107,7 +105,7 @@
         </div>
       </div>
 
-      <!-- OPTIONS POUR LE PROPRIÉTAIRE -->
+      <!-- Menu pour l'auteur de la participation -->
       <?php if (isset($_SESSION['user_id']) && (int)$submission['user_id'] === (int)$_SESSION['user_id']): ?>
         <div class="glass-panel" style="padding:1.5rem;">
           <h3 style="font-size:.9rem; text-transform:uppercase; color:var(--clr-text-dim); margin-bottom:1rem;">Gestion</h3>
@@ -126,7 +124,7 @@
   </div>
 </div>
 
-<!-- SCRIPT JS (Ajax simplifié) -->
+<!-- JavaScript pour les votes et les commentaires (Ajax) -->
 <script>
 function castVote(btn) {
     const subId   = btn.dataset.submissionId;

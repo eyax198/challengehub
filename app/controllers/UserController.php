@@ -2,9 +2,8 @@
 
 require_once ROOT_PATH . '/app/models/User.php';
 
-/**
- * Contrôleur User - Gère les profils utilisateurs et leurs paramètres
- */
+// CONTRÔLEUR USER
+// Gestion des profils et modifs de compte
 class UserController extends Controller {
 
     private $userModel;
@@ -13,9 +12,7 @@ class UserController extends Controller {
         $this->userModel = new User();
     }
 
-    /**
-     * Affiche le profil d'un utilisateur
-     */
+    // Voir un profil
     public function showProfile() {
         // Si aucun ID n'est passé en URL, on affiche le profil de l'utilisateur connecté
         $id = isset($_GET['id']) ? (int)$_GET['id'] : $this->currentUserId();
@@ -27,7 +24,7 @@ class UserController extends Controller {
             $this->redirect('index.php?page=challenges');
         }
 
-        // On charge les modèles pour afficher ses défis et ses participations
+        // On charge les modèles pour voir ce qu'il a fait
         require_once ROOT_PATH . '/app/models/Challenge.php';
         require_once ROOT_PATH . '/app/models/Submission.php';
 
@@ -50,9 +47,7 @@ class UserController extends Controller {
         ]);
     }
 
-    /**
-     * Affiche le formulaire de modification du profil
-     */
+    // Formulaire de modif de profil
     public function showEditProfile() {
         $this->requireLogin();
         
@@ -106,9 +101,7 @@ class UserController extends Controller {
         }
     }
 
-    /**
-     * Supprime définitivement un compte
-     */
+    // Supprimer son propre compte (Action grave !)
     public function deleteAccount() {
         $this->requireLogin();
         

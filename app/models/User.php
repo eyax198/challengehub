@@ -2,16 +2,13 @@
 
 require_once __DIR__ . '/Model.php';
 
-/**
- * Modèle User - Gère les données des utilisateurs
- */
+// MODÈLE USER
+// On gère les comptes des utilisateurs
 class User extends Model {
 
-    /**
-     * Crée un nouvel utilisateur (Inscription)
-     */
+    // Création d'un compte (Inscription)
     public function create($data) {
-        // Hachage sécurisé du mot de passe
+        // On hache le mot de passe pour la sécurité
         $hashed = password_hash($data['password'], PASSWORD_DEFAULT);
 
         $sql = "INSERT INTO users (username, email, password, avatar, bio, created_at)
@@ -30,9 +27,7 @@ class User extends Model {
         return $this->lastInsertId();
     }
 
-    /**
-     * Trouve un utilisateur par son ID
-     */
+    // Trouver un membre avec son ID
     public function findById($id) {
         $stmt = $this->query("SELECT * FROM users WHERE id = ?", [$id]);
         return $stmt->fetch();
@@ -53,9 +48,7 @@ class User extends Model {
         return $stmt->fetch();
     }
 
-    /**
-     * Vérifie les identifiants de connexion
-     */
+    // Pour vérifier si l'email et le mot de passe sont corrects
     public function authenticate($email, $password) {
         $user = $this->findByEmail($email);
         
@@ -67,9 +60,7 @@ class User extends Model {
         return false;
     }
 
-    /**
-     * Récupère les statistiques d'un utilisateur (Défis, participations...)
-     */
+    // On récupère les chiffres de l'user (combien de défis, participations...)
     public function getStats($userId) {
         $challenges    = $this->query("SELECT COUNT(*) FROM challenges WHERE user_id = ?", [$userId])->fetchColumn();
         $submissions   = $this->query("SELECT COUNT(*) FROM submissions WHERE user_id = ?", [$userId])->fetchColumn();

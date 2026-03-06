@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     PROFIL UTILISATEUR — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Profil de l'utilisateur -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -12,7 +10,7 @@
        </div>
     </div>
     
-    <!-- STATISTIQUES RAPIDES -->
+    <!-- Stats rapides : défis et participations -->
     <div class="flex items-center gap-1.5 mt-2 flex-wrap">
        <span class="badge badge-primary">⚡ <?= count($challenges) ?> défis lancés</span>
        <span class="badge badge-accent">🚀 <?= count($submissions) ?> participations envoyées</span>
@@ -23,7 +21,7 @@
 <div class="container section">
   <div style="display:grid; grid-template-columns:300px 1fr; gap:2.5rem; align-items:start;">
 
-    <!-- BARRE LATÉRALE : INFOS & ACTIONS -->
+    <!-- Infos et actions de compte -->
     <aside>
       <div class="glass-panel" style="padding:1.75rem; margin-bottom:1.5rem;">
         <h3 style="font-size:.9rem; text-transform:uppercase; color:var(--clr-text-dim); margin-bottom:1rem;">Bio / Description</h3>
@@ -46,7 +44,7 @@
     <!-- PARTIE PRINCIPALE : LES LISTES -->
     <div>
       
-      <!-- SES DÉFIS -->
+      <!-- Liste des défis qu'il a lancé -->
       <section style="margin-bottom:3rem;">
         <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">🏗️ Défis lancés par <?= htmlspecialchars($profileUser['username']) ?></h2>
         
@@ -71,7 +69,7 @@
         <?php endif; ?>
       </section>
 
-      <!-- SES PARTICIPATIONS -->
+      <!-- Liste des projets qu'il a envoyé -->
       <section>
         <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">🎉 Participations aux défis</h2>
         

@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     PAGE D'ACCUEIL — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Page d'accueil du site -->
 
 <!-- Hero (Section principale) -->
 <section class="hero">
@@ -28,16 +26,16 @@
     </a>
     <?php if (!isset($_SESSION['user_id'])): ?>
       <a href="index.php?page=register" class="btn btn-ghost btn-lg">
-        Créer un compte →
+        Créer un compte
       </a>
     <?php else: ?>
       <a href="index.php?page=challenge-create" class="btn btn-ghost btn-lg">
-        + Créer un défi
+        + Initier un défi
       </a>
     <?php endif; ?>
   </div>
 
-  <!-- Petites statistiques rapides -->
+  <!-- Quelques chiffres sur la plateforme -->
   <div class="hero__stats">
     <div class="hero__stat">
       <div class="hero__stat-value"><?= (int)$totalUsers ?></div>
@@ -80,7 +78,7 @@
   </div>
 </section>
 
-<!-- SECTION : Défis récents -->
+<!-- On affiche les derniers défis ici -->
 <?php if (!empty($recentChallenges)): ?>
 <section class="section">
   <div class="container">

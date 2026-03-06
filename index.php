@@ -1,22 +1,22 @@
 <?php
 
-/**
- * INDEX.PHP - Le Front Controller
- * C'est le point d'entrée unique de l'application.
- * Il initialise la session, charge les fichiers et gère les routes.
- */
+// --- 
+// POINT D'ENTRÉE : index.php
+// C'est ici que tout commence. Ce fichier reçoit toutes les requêtes 
+// et redirige l'utilisateur vers le bon contrôleur.
+// ---
 
-// 1. Démarrage de la session (pour gérer la connexion utilisateur)
+// On démarre la session au tout début pour gérer les connexions
 session_start();
 
-// 2. Définition du chemin racine du projet
+// On définit le chemin racine pour éviter les erreurs d'inclusion
 define('ROOT_PATH', __DIR__);
 
-// 3. Inclusion des fichiers de configuration
+// Importation de la config et de la base de données
 require_once ROOT_PATH . '/config/config.php';
 require_once ROOT_PATH . '/config/database.php';
 
-// 4. Chargement de tous les contrôleurs
+// On charge tous nos contrôleurs ici
 require_once ROOT_PATH . '/app/controllers/Controller.php';
 require_once ROOT_PATH . '/app/controllers/HomeController.php';
 require_once ROOT_PATH . '/app/controllers/AuthController.php';
@@ -24,18 +24,17 @@ require_once ROOT_PATH . '/app/controllers/UserController.php';
 require_once ROOT_PATH . '/app/controllers/ChallengeController.php';
 require_once ROOT_PATH . '/app/controllers/SubmissionController.php';
 
-// 5. Instanciation des contrôleurs
+// Création des objets pour chaque contrôleur
 $authCtrl       = new AuthController();
 $userCtrl       = new UserController();
 $challengeCtrl  = new ChallengeController();
 $submissionCtrl = new SubmissionController();
 $homeCtrl       = new HomeController();
 
-// 6. Récupération de la page demandée depuis l'URL (ex: ?page=login)
-// Si aucune page n'est précisée, on va sur 'home'
+// On récupère la page demandée (si rien, on affiche l'accueil)
 $page = $_GET['page'] ?? 'home';
 
-// 7. ROUTEUR : On utilise un switch/case pour diriger l'utilisateur au bon endroit
+// NOTRE ROUTEUR : Un simple switch pour charger la bonne méthode
 switch ($page) {
     
     // --- ACCUEIL ---

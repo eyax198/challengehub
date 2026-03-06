@@ -2,14 +2,11 @@
 
 require_once __DIR__ . '/Model.php';
 
-/**
- * Modèle Vote - Gère les votes des utilisateurs sur les projets
- */
+// MODÈLE VOTE
+// C'est ici qu'on gère les likes
 class Vote extends Model {
 
-    /**
-     * Ajoute ou retire un vote (Bascule / Toggle)
-     */
+    // On bascule le vote (si il existe on l'enlève, sinon on l'ajoute)
     public function cast($submissionId, $userId) {
         $existing = $this->getByUserAndSubmission($userId, $submissionId);
 
@@ -36,9 +33,7 @@ class Vote extends Model {
         return $this->query($sql, [$userId, $submissionId])->fetch();
     }
 
-    /**
-     * Compte le nombre total de votes pour un projet
-     */
+    // Compter les votes d'un projet
     public function countBySubmission($submissionId) {
         $sql = "SELECT COUNT(*) FROM votes WHERE submission_id = ?";
         return (int) $this->query($sql, [$submissionId])->fetchColumn();

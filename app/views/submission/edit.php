@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     MODIFIER MA PARTICIPATION — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Page pour modifier un projet déjà envoyé -->
 
 <div class="page-header">
   <div class="page-header__inner">

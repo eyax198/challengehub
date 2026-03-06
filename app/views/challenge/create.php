@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     CRÉER UN DÉFI — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Formulaire pour créer un nouveau défi -->
 
 <div class="page-header">
   <div class="page-header__inner text-center">
@@ -13,7 +11,7 @@
   <div class="auth-card" style="max-width:700px; margin:0 auto; padding:2rem;">
     
     <form action="index.php?page=challenge-create" method="POST" enctype="multipart/form-data">
-        <!-- Sécurité CSRF -->
+        <!-- Sécurité du formulaire -->
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
         <!-- Titre du défi -->

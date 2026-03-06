@@ -5,9 +5,8 @@ require_once ROOT_PATH . '/app/models/Challenge.php';
 require_once ROOT_PATH . '/app/models/Comment.php';
 require_once ROOT_PATH . '/app/models/Vote.php';
 
-/**
- * Contrôleur Submission - Gère les participations, votes et commentaires
- */
+// CONTRÔLEUR SUBMISSION
+// Il gère les projets envoyés, les votes et les commentaires
 class SubmissionController extends Controller {
 
     private $submissionModel;
@@ -22,9 +21,7 @@ class SubmissionController extends Controller {
         $this->voteModel       = new Vote();
     }
 
-    /**
-     * Affiche une participation et ses commentaires
-     */
+    // Affiche un projet précis
     public function show() {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         $submission = $this->submissionModel->findById('submissions', $id);
@@ -50,16 +47,14 @@ class SubmissionController extends Controller {
         ]);
     }
 
-    /**
-     * Soumettre une participation à un défi (POST)
-     */
+    // Envoyer un projet (POST)
     public function create() {
         $this->requireLogin();
         $this->verifyCsrfToken();
 
         $challengeId = (int)$_POST['challenge_id'];
         
-        // Vérifier si l'utilisateur a déjà participé
+        // On évite qu'un gars participe deux fois au même truc
         if ($this->submissionModel->existsByUserAndChallenge($this->currentUserId(), $challengeId)) {
             $this->setFlash('error', 'Vous avez déjà participé à ce défi.');
             $this->redirect('index.php?page=challenge-show&id=' . $challengeId);
@@ -86,9 +81,7 @@ class SubmissionController extends Controller {
         }
     }
 
-    /**
-     * Gère les VOTES via AJAX (Sans rechargement de page)
-     */
+    // Gère les VOTES (AJAX pour pas que la page recharge)
     public function vote() {
         $this->requireLogin();
         $this->verifyCsrfToken();

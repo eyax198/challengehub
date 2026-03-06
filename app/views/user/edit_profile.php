@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     MODIFIER LE PROFIL — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Page de réglages du profil -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -56,7 +54,7 @@
         </div>
     </form>
 
-    <!-- Zone Danger : Suppression -->
+    <!-- Suppression du compte -->
     <div style="margin-top:4rem; padding-top:2rem; border-top:2px solid var(--clr-border);">
         <h4 style="color:var(--clr-danger); margin-bottom:1rem;">⚠️ Zone de danger</h4>
         <p style="font-size:.85rem; color:var(--clr-text-dim); margin-bottom:1.5rem;">La suppression de votre compte est définitive. Toutes vos données seront perdues.</p>

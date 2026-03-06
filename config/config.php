@@ -1,21 +1,21 @@
 <?php
 
-// ─── App Settings ────────────────────────────────────────────
-define('APP_NAME',    'ChallengeHub_db');
-define('APP_VERSION', '1.0.0');
-define('BASE_URL', 'http://localhost:8000');
+// Paramètres globaux de l'app
+define('APP_NAME',    'ChallengeHub');
+define('APP_VERSION', '1.0');
+define('BASE_URL', 'http://localhost:8000'); // À changer si on utilise un autre port
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', dirname(__DIR__));
 }
 
-// ─── Session ─────────────────────────────────────────────────
+// Réglages des sessions
 define('SESSION_NAME',     'challengehub_session');
-define('SESSION_LIFETIME', 3600 * 24); // 24 hours
+define('SESSION_LIFETIME', 3600 * 24); 
 
-// ─── Upload Settings ─────────────────────────────────────────
+// Gestion des uploads d'images
 define('UPLOAD_DIR',      ROOT_PATH . '/public/images/uploads/');
 define('UPLOAD_URL',      BASE_URL  . '/public/images/uploads/');
-define('MAX_FILE_SIZE',   5 * 1024 * 1024); // 5 MB
+define('MAX_FILE_SIZE',   5 * 1024 * 1024); // Limite à 5 Mo
 define('ALLOWED_TYPES',   ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 // ─── Pagination ───────────────────────────────────────────────

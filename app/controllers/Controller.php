@@ -1,19 +1,12 @@
 <?php
 
-/**
- * Le contrôleur de base (Classe parente)
- * Contient les fonctions partagées par tous les contrôleurs.
- */
+// NOTRE CONTRÔLEUR PARENT
+// Il contient les outils qu'on utilise dans tous les contrôleurs
 abstract class Controller {
 
-    /**
-     * Affiche une vue complète (avec header et footer)
-     * @param string $view Nom du fichier dans app/views/
-     * @param array $data Tableau de variables à passer à la vue
-     */
+    // On affiche une vue (avec header et footer autour)
     protected function render($view, $data = []) {
-        // Transforme les clés du tableau en variables utilisables dans la vue
-        // Ex: ['titre' => 'Accueil'] crée une variable $titre
+        // On transforme le tableau $data en variables indépendantes
         extract($data);
 
         // On remplace les points par des slashs si besoin (ex: 'auth.login' => 'auth/login')
@@ -29,9 +22,7 @@ abstract class Controller {
         }
     }
 
-    /**
-     * Affiche juste un morceau de vue (utilisé pour l'AJAX ou les petits composants)
-     */
+    // Affiche juste un bout de vue (sans header/footer)
     protected function renderPartial($view, $data = []) {
         extract($data);
         $view = str_replace('.', '/', $view);
@@ -41,24 +32,18 @@ abstract class Controller {
         }
     }
 
-    /**
-     * Redirige vers une autre page
-     */
+    // Petite fonction pour rediriger rapidement
     protected function redirect($url) {
         header('Location: ' . $url);
         exit();
     }
 
-    /**
-     * Vérifie si l'utilisateur est connecté via la session
-     */
+    // Est-ce que l'utilisateur est logué ?
     protected function isLoggedIn() {
         return isset($_SESSION['user_id']);
     }
 
-    /**
-     * Interdit l'accès aux utilisateurs non connectés
-     */
+    // On bloque l'accès si on n'est pas connecté
     protected function requireLogin() {
         if (!$this->isLoggedIn()) {
             $this->setFlash('error', 'Vous devez être connecté pour accéder à cette page.');
@@ -73,23 +58,17 @@ abstract class Controller {
         return $_SESSION['user_id'] ?? null;
     }
 
-    /**
-     * Enregistre un message flash (pour afficher une notification après une action)
-     */
+    // Pour mettre un message de succès ou d'erreur temporaire
     protected function setFlash($type, $message) {
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
     }
 
-    /**
-     * Nettoie une chaîne de caractères contre les failles XSS
-     */
+    // PROTECTION XSS : On nettoie toutes les entrées de texte
     protected function sanitize($value) {
         return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
     }
 
-    /**
-     * Génère un jeton de sécurité CSRF pour les formulaires
-     */
+    // GÉNÉRATION TOKEN CSRF : Contre les attaques de formulaires forcés
     protected function generateCsrfToken() {
         if (empty($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = md5(uniqid(rand(), true));
@@ -108,11 +87,7 @@ abstract class Controller {
         }
     }
 
-    /**
-     * Gère l'upload d'un fichier (image)
-     * @param string $inputName Nom du champ <input type="file">
-     * @return string|null Nom du fichier enregistré ou null
-     */
+    // On gère l'envoi d'images ici
     protected function handleUpload($inputName) {
         if (empty($_FILES[$inputName]['tmp_name'])) {
             return null;

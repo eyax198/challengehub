@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     MODIFIER UN DÉFI — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Page pour modifier un défi existant -->
 
 <div class="page-header">
   <div class="page-header__inner">

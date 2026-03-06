@@ -2,9 +2,8 @@
 
 require_once ROOT_PATH . '/app/models/User.php';
 
-/**
- * Contrôleur Auth - Gère l'authentification (Connexion / Inscription)
- */
+// CONTRÔLEUR AUTH
+// On gère ici tout ce qui est connexion et inscription
 class AuthController extends Controller {
 
     private $userModel;
@@ -14,16 +13,14 @@ class AuthController extends Controller {
         $this->userModel = new User();
     }
 
-    /**
-     * Affiche la page de connexion
-     */
+    // Affiche le formulaire de login
     public function showLogin() {
         // Si l'utilisateur est déjà connecté, on le renvoie à l'accueil
         if ($this->isLoggedIn()) {
             $this->redirect('index.php');
         }
 
-        // On génère un jeton CSRF pour sécuriser le futur formulaire de POST
+        // Token de sécurité pour le formulaire
         $csrf = $this->generateCsrfToken();
 
         $this->render('auth/login', [
@@ -32,9 +29,7 @@ class AuthController extends Controller {
         ]);
     }
 
-    /**
-     * Traite la soumission du formulaire de connexion (POST)
-     */
+    // Traitement du login (POST)
     public function login() {
         // Vérification de sécurité (CSRF)
         $this->verifyCsrfToken();
@@ -63,9 +58,7 @@ class AuthController extends Controller {
         }
     }
 
-    /**
-     * Affiche la page d'inscription
-     */
+    // Affiche le formulaire d'inscription
     public function showRegister() {
         if ($this->isLoggedIn()) {
             $this->redirect('index.php');
@@ -79,9 +72,7 @@ class AuthController extends Controller {
         ]);
     }
 
-    /**
-     * Traite l'inscription (POST)
-     */
+    // Traitement de l'inscription (POST)
     public function register() {
         $this->verifyCsrfToken();
 
@@ -124,9 +115,7 @@ class AuthController extends Controller {
         }
     }
 
-    /**
-     * Déconnexion de l'utilisateur
-     */
+    // Déconnexion
     public function logout() {
         // On vide toutes les variables de session
         session_unset();

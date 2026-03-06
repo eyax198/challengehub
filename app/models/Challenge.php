@@ -2,14 +2,11 @@
 
 require_once __DIR__ . '/Model.php';
 
-/**
- * Modèle Challenge - Gère les données des défis
- */
+// MODÈLE CHALLENGE
+// Ici on gère toutes les données liées aux défis
 class Challenge extends Model {
 
-    /**
-     * Crée un défi
-     */
+    // Insertion d'un défi dans la table
     public function create($data) {
         $sql = "INSERT INTO challenges (user_id, title, description, category, deadline, image, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, NOW())";
@@ -27,9 +24,7 @@ class Challenge extends Model {
         return $this->lastInsertId();
     }
 
-    /**
-     * Récupère un défi par son ID (avec les infos de l'auteur)
-     */
+    // Récupère un défi avec le pseudo de celui qui l'a créé
     public function findById($id) {
         $sql = "SELECT c.*, u.username, u.avatar
                 FROM challenges c
@@ -39,9 +34,7 @@ class Challenge extends Model {
         return $this->query($sql, [$id])->fetch();
     }
 
-    /**
-     * Liste tous les défis avec filtres et pagination
-     */
+    // Récupération de la liste avec filtres (keyword, catégorie, ...)
     public function getAll($filters = [], $page = 1) {
         // Construction dynamique de la clause WHERE
         $where = "1=1";
@@ -81,9 +74,7 @@ class Challenge extends Model {
         return $this->query($sql, $params)->fetchAll();
     }
 
-    /**
-     * Compte le nombre total de défis (pour la pagination)
-     */
+    // Pour savoir combien il y a de défis au total (utile pour les pages)
     public function countAll($filters = []) {
         $where = "1=1";
         $params = [];

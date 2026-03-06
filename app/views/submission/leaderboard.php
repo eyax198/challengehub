@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     CLASSEMENT DES PROJETS — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Page du classement général -->
 
 <div class="page-header">
   <div class="page-header__inner">
@@ -22,7 +20,7 @@
       <?php foreach ($topSubmissions as $index => $sub): ?>
         <article class="card fade-in" style="position:relative;">
           
-          <!-- Badge de rang (Simplifié) -->
+          <!-- Le numéro du rang -->
           <div style="position:absolute; top:-1rem; left:-1rem; width:2.5rem; height:2.5rem; border-radius:100%; display:flex; align-items:center; justify-content:center; font-weight:700; background:var(--clr-primary-l); color:white; border:4px solid var(--clr-bg); z-index:10;">
              <?= $index + 1 ?>
           </div>

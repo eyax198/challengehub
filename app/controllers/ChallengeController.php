@@ -2,9 +2,8 @@
 
 require_once ROOT_PATH . '/app/models/Challenge.php';
 
-/**
- * Contrôleur Challenge - Gère les défis (Affichage, Création, Modification, Suppression)
- */
+// CONTRÔLEUR CHALLENGE
+// On gère les défis : les voir, les créer, les modifier...
 class ChallengeController extends Controller {
 
     private $challengeModel;
@@ -14,9 +13,7 @@ class ChallengeController extends Controller {
         $this->challengeModel = new Challenge();
     }
 
-    /**
-     * Liste de tous les défis (avec filtres et recherche)
-     */
+    // Page avec la liste de tous les défis
     public function index() {
         // Récupération des filtres depuis l'URL (?keyword=...&category=...)
         $filters = [
@@ -33,7 +30,7 @@ class ChallengeController extends Controller {
         $challenges = $this->challengeModel->getAll($filters, $page);
         $total      = $this->challengeModel->countAll($filters);
         
-        // Calcul du nombre total de pages (utilisant la constante PER_PAGE du config.php)
+        // On calcule combien il y a de pages
         $totalPages = ceil($total / PER_PAGE);
         
         // Récupération de la liste des catégories pour le menu déroulant
@@ -49,9 +46,7 @@ class ChallengeController extends Controller {
         ]);
     }
 
-    /**
-     * Affiche les détails d'un défi spécifique
-     */
+    // Voir un défi en détail
     public function show() {
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         
@@ -63,7 +58,7 @@ class ChallengeController extends Controller {
             $this->redirect('index.php?page=challenges');
         }
 
-        // On charge les modèles nécessaires pour les participations et les votes
+        // On a besoin d'autres modèles ici pour les votes et commentaires
         require_once ROOT_PATH . '/app/models/Submission.php';
         require_once ROOT_PATH . '/app/models/Vote.php';
 
@@ -204,9 +199,7 @@ class ChallengeController extends Controller {
         }
     }
 
-    /**
-     * Supprime un défi
-     */
+    // Pour supprimer un défi
     public function delete() {
         $this->requireLogin();
         

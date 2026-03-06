@@ -1,11 +1,9 @@
 <?php
 
-/**
- * Classe Database - Gestion de la connexion PDO
- * Utilise le Design Pattern "Singleton" pour garantir une seule connexion.
- */
+// Gestion de la connexion PDO avec le pattern Singleton
+// On utilise cette classe pour avoir une seule connexion ouverte
 class Database {
-    // Variable statique pour stocker l'unique instance de la connexion
+    // On garde l'instance ici pour la réutiliser
     private static $instance = null;
 
     // Paramètres de connexion
@@ -14,12 +12,8 @@ class Database {
     private $username = 'root';
     private $password = '';
 
-    /**
-     * Le constructeur est privé pour empêcher l'instanciation directe (via new Database())
-     */
-    private function __construct() {
-        // Vide
-    }
+    // On bloque le "new Database()" pour forcer l'usage du Singleton
+    private function __construct() { }
 
     /**
      * Empêche le clonage de l'objet
@@ -28,14 +22,11 @@ class Database {
         // Vide
     }
 
-    /**
-     * Méthode statique pour récupérer l'instance de PDO
-     * @return PDO
-     */
+    // Fonction pour récupérer la connexion (crée l'instance si elle n'existe pas)
     public static function getInstance() {
         if (self::$instance === null) {
             try {
-                // Création d'une instance temporaire pour accéder aux propriétés privées
+                // Paramètres de connexion (DSN)
                 $db = new self();
                 $dsn = "mysql:host=" . $db->host . ";dbname=" . $db->dbName . ";charset=utf8mb4";
 

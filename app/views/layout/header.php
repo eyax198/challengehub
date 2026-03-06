@@ -51,14 +51,14 @@
   </div>
 </nav>
 
-<!-- ── Messages de Notification (Flash messages) ──────────────── -->
+<!-- On affiche ici les notifications (succès, erreur) si il y en a -->
 <?php if (isset($_SESSION['flash'])): ?>
   <div class="container" style="padding-top: 1rem;">
     <div class="alert alert-<?= htmlspecialchars($_SESSION['flash']['type']) ?>">
       <?= htmlspecialchars($_SESSION['flash']['message']) ?>
     </div>
   </div>
-  <?php unset($_SESSION['flash']); // On efface le message après l'affichage ?>
+  <?php unset($_SESSION['flash']); // On supprime le message pour pas qu'il revienne au prochain refresh ?>
 <?php endif; ?>
 
 <main id="main-content">

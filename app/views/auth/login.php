@@ -1,6 +1,4 @@
-<!-- ═══════════════════════════════════════════════════
-     PAGE DE CONNEXION — ChallengeHub
-     ═══════════════════════════════════════════════════ -->
+<!-- Formulaire de login -->
 
 <div class="auth-wrapper">
   <div class="auth-card slide-up">
@@ -13,7 +11,7 @@
 
     <!-- Formulaire de Connexion -->
     <form class="auth-card__form" method="POST" action="index.php?page=login" id="login-form">
-      <!-- Jeton de sécurité CSRF (Obligatoire) -->
+    <!-- Sécurité CSRF pour le formulaire -->
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
 
       <!-- Email -->
